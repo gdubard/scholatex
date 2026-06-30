@@ -47,11 +47,16 @@ local function warn_if_shadows(name, lineno)
   if sl._blocks[name] or sl._tags[name] then native = true end
   if native then
     local where = lineno and (" (line " .. lineno .. ")") or ""
-    io.stderr:write("scholatex: warning: 'let " .. name .. "'" .. where
+    local msg = "scholatex: warning: 'let " .. name .. "'" .. where
       .. " shadows a built-in name and will be ignored; "
       .. "the built-in '" .. name .. "' always takes precedence. "
-      .. "Use a different alias name.\n")
+      .. "Use a different alias name."
+    -- Surface on both channels: stderr for interactive feedback, the
+    -- LuaTeX transcript (.log) for regression baselines to pin.
+    io.stderr:write(msg, "\n")
+    if texio and texio.write_nl then texio.write_nl(msg) end
   end
+  return native
 end
 
 local function ends_struct_open(line)
@@ -76,7 +81,16 @@ local function lua_control(line)
     local items = U.split_commas(llist)
     local quoted = {}
     for _, it in ipairs(items) do
-      quoted[#quoted + 1] = string.format("%q", it)
+      -- Auto-coerce numeric literals so `for n in [1, 2, 3]` produces
+      -- numbers, not the strings "1" / "2" / "3" (the asymmetry with
+      -- the range form `for n in 1..3` was a long-standing footgun).
+      local trimmed = U.trim(it)
+      local n = tonumber(trimmed)
+      if n then
+        quoted[#quoted + 1] = trimmed
+      else
+        quoted[#quoted + 1] = string.format("%q", it)
+      end
     end
     return ("for _, %s in ipairs({%s}) do"):format(lv, table.concat(quoted, ", "))
   end
@@ -183,8 +197,10 @@ forward_text = function(code, s)
       local close = s:find("$", i + 1, true)
       if not close then
         local where = sl._line and (" (line " .. sl._line .. ")") or ""
-        io.stderr:write("scholatex: warning: unterminated '$'" .. where
-          .. "; treating it as a literal dollar sign.\n")
+        local msg = "scholatex: warning: unterminated '$'" .. where
+          .. "; treating it as a literal dollar sign."
+        io.stderr:write(msg, "\n")
+        if texio and texio.write_nl then texio.write_nl(msg) end
         buf[#buf + 1] = "\\$"; i = i + 1
         goto continue
       end
@@ -241,8 +257,10 @@ forward_text = function(code, s)
       local close = s:find(">", i + 1, true)
       if not close then
         local where = sl._line and (" (line " .. sl._line .. ")") or ""
-        io.stderr:write("scholatex: warning: unterminated '<'" .. where
-          .. "; treating it as a literal '<'. To print a literal '<', double it as <<.\n")
+        local msg = "scholatex: warning: unterminated '<'" .. where
+          .. "; treating it as a literal '<'. To print a literal '<', double it as <<."
+        io.stderr:write(msg, "\n")
+        if texio and texio.write_nl then texio.write_nl(msg) end
         buf[#buf + 1] = "\\textless{}"; i = i + 1
         goto continue
       end
@@ -400,6 +418,26 @@ process_lines = function(code, body_lines)
         end
       end
       local bname, bwords = line:match("^%s*<(%a[%w_]*)%s*(.-)>%s*{%s*$")
+      -- A line that opens with `<NAME ...>{...}` where NAME is a known
+      -- block (not a tag) is almost certainly an attempted block opener
+      -- with the body folded onto the same line. The block dispatcher
+      -- requires `{` to be the last non-whitespace character on the
+      -- opener line (regex above). Without this catch, dispatch
+      -- silently falls through to the inline-tag path and a user sees
+      -- the unrelated `unknown tag attribute: 'NAME'` from STYLE.
+      --
+      -- We only flag NAMES that are registered as blocks AND are NOT
+      -- registered as tags, so genuine inline-tag forms (e.g. <b>{...})
+      -- are unaffected.
+      if not bname then
+        local fname = line:match("^%s*<(%a[%w_]*)[^>]*>%s*{.*")
+        if fname and sl._blocks[fname] and not sl._tags[fname] then
+          error("block opener for '" .. fname
+              .. "' requires `{` to be the last non-whitespace character"
+              .. " on its line. Move the body to the next line, or use"
+              .. " an inline-tag form if available.")
+        end
+      end
       if bname and BLOCKALIAS[bname] then
         local def = BLOCKALIAS[bname]
         local opts = def.opts
@@ -491,7 +529,7 @@ local function build_lua(src)
     do
       local oname, orest = line:match("^%s*let%s+([%a_][%w_]*)%s*=%s*<%s*fn%f[%s>](.*)$")
       if oname then
-        warn_if_shadows(oname, lineno)
+        if warn_if_shadows(oname, lineno) then goto continue end
         if orest:match(">%s*$") then
           -- objet complet sur une seule ligne
           local inner = orest:gsub(">%s*$", "")
@@ -515,7 +553,7 @@ local function build_lua(src)
     end
     local name, params, rhs = line:match("^%s*let%s+([%a_][%w_]*)%s*{(.-)}%s*=%s*(.+)$")
     if name then
-      warn_if_shadows(name, lineno)
+      if warn_if_shadows(name, lineno) then goto continue end
       local plist = {}
       for p in params:gmatch("[%a_][%w_]*") do plist[#plist + 1] = p end
       local barhs = rhs:match("^%s*<(.-)>%s*$")
@@ -539,7 +577,7 @@ local function build_lua(src)
     else
       local an, arhs = line:match("^%s*let%s+([%a_][%w_]*)%s*=%s*<(.-)>%s*$")
       if an then
-        warn_if_shadows(an, lineno)
+        if warn_if_shadows(an, lineno) then goto continue end
         local blockname, opts = nil, {}
         for w in arhs:gmatch("%S+") do
           if not blockname and sl._blocks[w] then

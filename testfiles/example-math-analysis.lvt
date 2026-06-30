@@ -1,0 +1,151 @@
+\input{regression-test}
+% !TeX program = lualatex
+% =====================================================================
+%  math-analysis.tex
+%  Analysis in one chapter: big operators with an index (sum, product),
+%  limits — both the lim(...) operator and the arrow form written under
+%  a long arrow — trigonometry with upright function names, derivatives
+%  up to a differential equation and the heat equation, then the whole
+%  integral family (primitive, definite, multiple, contour, principal
+%  value, average).
+% =====================================================================
+\documentclass[
+  margins=18,
+  font=Latin Modern Roman,
+  size=12,
+  linespread=1.4,
+  lang=en
+]{scholatex}
+\begin{document}
+
+let title = <Red b 18pt c>
+let h1    = <Navy b section>
+
+<title>scholatex — analysis
+
+% =====================================================================
+<h1>Operators with an index
+% =====================================================================
+
+A big operator carries its index in (...); its body follows freely
+and is set in display style so fractions stay full size.
+
+<box line:Indigo fill:Lavender radius:3 title:{Sum and product}>{
+	$sum(i=1, n) i = n(n+1)/2$ <3tab> $prod(k=1, n) k$
+}
+
+% =====================================================================
+<h1>Limits
+% =====================================================================
+
+A limit's (...) holds the approach, written with ->; the target
+sits under the word, as it should:
+
+<box line:Indigo fill:Lavender radius:3>{
+	$lim(x->0) f(x)$ <3tab> $lim(x->+inf) 1/x$
+}
+
+For the running phrase "$u_n$ tends to $l$" set under a long arrow, use
+arrow(...): the condition is written underneath, and to or ->
+read the same inside it.
+
+<box line:Indigo fill:Lavender radius:3 title:{A sequence converging}>{
+	$u_n arrow(n to +inf) l$ <3tab> $1/n arrow(n to +inf) 0$
+}
+
+% =====================================================================
+<h1>Trigonometry
+% =====================================================================
+
+Function names — sin, cos, tan, ln, exp and
+the rest — are set upright automatically, and a name glued to (...)
+takes its argument as one atom, so fractions behave.
+
+<box line:Crimson fill:MistyRose radius:3 title:{The fundamental identity}>{
+	$sin(x)^2 + cos(x)^2 = 1$
+}
+
+<box line:Crimson fill:MistyRose radius:3 title:{Addition formula}>{
+	$cos(a+b) = cos(a)cos(b) - sin(a)sin(b)$
+}
+
+<box line:Crimson fill:MistyRose radius:3>{
+	$tan(x) = sin(x)/cos(x)$ <3tab> $lim(x->0) sin(x)/x = 1$
+}
+
+% =====================================================================
+<h1>Derivatives and differential equations
+% =====================================================================
+
+A derivative is written as the fraction it is. The differential d is
+set upright (ISO 80000-2), matching the d of the integrals — but only
+when both sides of the fraction carry it, so a variable named d is left
+alone (d/2 stays a plain fraction).
+
+<box line:DarkOrange fill:OldLace radius:3 title:{Leibniz notation}>{
+	$dy/dx$ <3tab> $(d^2 y)/(dx^2)$ <3tab> $d/dx (x^2) = 2x$
+}
+
+A first-order differential equation reads in one line:
+
+<box line:DarkOrange fill:OldLace radius:3>{
+	$dy/dx + y = 0$
+}
+
+Partial derivatives use partial ($partial$); parenthesise each side so
+the fraction groups correctly. The heat equation, for instance:
+
+<box line:DarkOrange fill:OldLace radius:3 title:{The heat equation}>{
+	$(partial u)/(partial t) = (partial^2 u)/(partial x^2)$
+}
+
+% =====================================================================
+<h1>Integrals: body and differential
+% =====================================================================
+
+An integral closes on a differential. Its head (...) names the
+variable; everything up to the end of the formula is the integrand, and the
+differential $dx$ is appended automatically.
+
+<box line:DarkGreen fill:Honeydew radius:3 title:{Primitive and definite integral}>{
+	$int(x) f(x)$ <3tab> $int(x=a, b) f(x)$
+}
+
+The head's variable is the differential, so a change of letter is just a
+change in the head: $int(t=0, 1) t^2$. To keep a term outside the
+integral, close the integrand in parentheses — these differ:
+
+<box line:DarkGreen fill:Honeydew radius:3>{
+	$(int(x=a, b) f(x)) + 1$ <3tab> $int(x=a, b) (f(x) + 1)$
+}
+
+% =====================================================================
+<h1>Multiple integrals
+% =====================================================================
+
+Separate several domains with ; inside the head. The count of
+domains chooses the single, double or triple integral sign; the
+differentials come out in reverse order, the Fubini convention.
+
+<box line:DarkGreen fill:Honeydew radius:3>{
+	$int(x=a, b ; y=c, d) f(x,y)$
+
+	$int(x=a, b ; y=c, d ; z=e, g) f(x,y,z)$
+}
+
+A single named domain is a region integral over that set, with the area
+element giving the surface form: $int(D) f$.
+
+% =====================================================================
+<h1>Contour, principal value, average
+% =====================================================================
+
+Three named integral operators round out the family: a contour integral
+$contourint(C) f(z)$, a Cauchy principal value $pvint(x=a, b) f(x)$, and
+the average (normalised) integral $meanint(x=a, b) f(x)$.
+
+<box line:DarkGreen fill:Honeydew radius:3 title:{The integral family}>{
+	$contourint(C) f(z)$ <3tab> $pvint(x=a, b) f(x)$ <3tab> $meanint(x=a, b) f(x)$
+}
+
+\end{document}

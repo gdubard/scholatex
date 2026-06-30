@@ -1,0 +1,99 @@
+\input{regression-test}
+% !TeX program = lualatex
+% =====================================================================
+%  probability.tex
+%  Probability and statistics vocabulary: counting (binomial coefficient
+%  C(n,k), arrangement A(n,k), factorial), the blackboard operators for
+%  probability PP and expectation EE, variance/covariance, the common
+%  distributions, and the distribution/density functions. The blackboard
+%  letters are reached by the doubled PP and EE; the conditional bar is the
+%  keyword "mid".
+% =====================================================================
+\documentclass[
+  margins=24,
+  font=Latin Modern Roman,
+  size=12,
+  linespread=1.4,
+  lang=en
+]{scholatex}
+\begin{document}
+
+let title = <Red b 18pt c>
+let h1    = <Navy b section>
+let note  = <Gray i>
+
+<title>scholatex — probability
+
+% =====================================================================
+<h1>Counting
+% =====================================================================
+
+The binomial coefficient is $C(n, k)$, written with two arguments; with a
+single argument $C(t)$ stays an ordinary function, so the same letter serves
+both. The arrangement is $A(n, k)$, and the factorial is $factorial(n)$ or
+simply $n!$ in running maths.
+
+<note>The Pascal rule and the binomial theorem.
+
+$C(n, k) = C(n-1, k-1) + C(n-1, k)$
+
+$(a + b)^n = sum(k=0,n) C(n, k) a^k b^(n-k)$
+
+% =====================================================================
+<h1>Probability and expectation
+% =====================================================================
+
+A doubled capital is the blackboard letter: $PP$ is the blackboard P and
+$EE$ the blackboard E, the same doubling rule as $NN$, $RR$ and $CC$. So
+$PP(A)$ is a probability, $EE(X)$ an expectation. The conditional bar is the
+keyword mid, so $PP(A mid B)$ reads with proper spacing.
+
+<note>Total probability and the definition of the mean.
+
+$PP(A) = PP(A mid B) PP(B) + PP(A mid bar(B)) PP(bar(B))$
+
+$EE(X) = sum(k=1,n) k PP(X = k)$
+
+% =====================================================================
+<h1>Variance, deviation, covariance
+% =====================================================================
+
+The spread of a variable: $var(X)$ is the variance, $std(X)$ the standard
+deviation, $cov(X, Y)$ the covariance of a pair.
+
+<note>The König–Huygens identity.
+
+$var(X) = EE(X^2) - EE(X)^2$
+
+$cov(X, Y) = EE(X Y) - EE(X) EE(Y)$
+
+% =====================================================================
+<h1>Distributions
+% =====================================================================
+
+The usual laws name themselves: $normal(mu, sigma)$ is the normal law (the
+second argument is the standard deviation, squared in the rendering),
+$poisson(lambda)$ the Poisson law, $binomial(n, p)$ the binomial law.
+
+<note>Reading a model.
+
+$X$ follows $normal(0, 1)$, the standard normal.
+
+$N$ follows $poisson(lambda)$, with $PP(N = k) = exp(-lambda) lambda^k / factorial(k)$.
+
+$S$ follows $binomial(n, p)$, with $EE(S) = n p$ and $var(S) = n p (1 - p)$.
+
+% =====================================================================
+<h1>Distribution and density
+% =====================================================================
+
+The cumulative distribution function is $repart(X, x)$ and the density is
+$densite(X, x)$ — the variable in subscript, the point in the argument.
+
+<note>Linking the two.
+
+$repart(X, x) = PP(X <= x)$
+
+For a continuous law, $repart(X, x) = int(t=-inf,x) densite(X, t)$.
+
+\end{document}

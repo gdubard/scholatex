@@ -38,7 +38,7 @@ local Tri = {}
 function Tri.equilateral(P,s) return {{P[1],0,0},{P[2],s,0},{P[3],s*cos(60),s*sin(60)}}, {sides="all"} end
 function Tri.isosceles(P,e,b)
   local d=e*e-(b/2)*(b/2)
-  if d<=0 then return nil,"côté égal trop court pour cette base" end
+  if d<=0 then return nil,"equal side too short for the given base" end
   local h=math.sqrt(d)
   return {{P[1],b/2,h},{P[2],0,0},{P[3],b,0}}, {sides={{1,2},{1,3}}}
 end
@@ -51,13 +51,13 @@ function Tri.right(P,p,q,at)
 end
 function Tri.sss(P,a,b,c)
   local cosA=(a*a+c*c-b*b)/(2*a*c)
-  if cosA<-1 or cosA>1 then return nil,"côtés incompatibles (inégalité triangulaire non respectée)" end
+  if cosA<-1 or cosA>1 then return nil,"sides violate the triangle inequality" end
   local A=math.deg(math.acos(cosA))
   return {{P[1],0,0},{P[2],a,0},{P[3],c*cos(A),c*sin(A)}}, {}
 end
 function Tri.sas(P,a,b,t) return {{P[1],0,0},{P[2],a,0},{P[3],b*cos(t),b*sin(t)}}, {} end
 function Tri.asa(P,angA,angB,c)
-  if angA+angB>=180 then return nil,"la somme des deux angles atteint ou dépasse 180°" end
+  if angA+angB>=180 then return nil,"the two given angles sum to 180 degrees or more" end
   local angC=180-angA-angB
   local AC=c*sin(angB)/sin(angC)
   return {{P[1],0,0},{P[2],c,0},{P[3],AC*cos(angA),AC*sin(angA)}}, {}
@@ -289,7 +289,7 @@ local function compute(line, dict)
   if tag=="triangle" then
     if #P~=3 then error("scholatex: triangle needs 3 points, got "..#P) end
     if attrs.equilateral then verts,marks=Tri.equilateral(P,num(attrs.side,"side"))
-    elseif attrs.isosceles then verts,marks=Tri.isosceles(P,num(attrs.side,"side"),num(attrs.base,"base"))
+    elseif attrs.isosceles then verts,err=Tri.isosceles(P,num(attrs.side,"side"),num(attrs.base,"base"))
     elseif attrs.right~=nil then
       local at=1
       if type(attrs.right)=="string" then for k,ch in ipairs(P) do if ch==attrs.right then at=k end end end

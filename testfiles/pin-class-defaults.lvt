@@ -1,0 +1,20 @@
+\input{regression-test}
+% Pin scholatex's class-level dimensions and the \scholatextab /
+% \scholatexline custom lengths. These are set in scholatex.cls during
+% \LoadClass + the lengths block, well before \AtBeginDocument fires
+% and triggers the body re-read. Use \typeout (which writes to the
+% transcript .log) so the values land in the regression baseline.
+%
+% Any cls option change (margins, tabwidth, lineheight, size) that
+% accidentally shifts these dims will flip the baseline.
+\AddToHook{begindocument/before}{%
+  \typeout{PIN: \string\textwidth=\the\textwidth}%
+  \typeout{PIN: \string\paperwidth=\the\paperwidth}%
+  \typeout{PIN: \string\textheight=\the\textheight}%
+  \typeout{PIN: \string\scholatextab=\the\scholatextab}%
+  \typeout{PIN: \string\scholatexline=\the\scholatexline}%
+}
+\documentclass[lang=en, margins=20, size=11, tabwidth=8, lineheight=8]{scholatex}
+\begin{document}
+hello
+\end{document}

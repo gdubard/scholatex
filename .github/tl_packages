@@ -1,0 +1,99 @@
+# TeX Live packages required to compile scholatex and run its test corpus.
+#
+# Format: one package name per line; blank lines and `# ` comments allowed.
+# Consumed by .github/workflows/*.yml via setup-texlive-action's
+# `package-file:` option, and hashed by hashFiles() so this list is part
+# of the TL cache key.
+#
+# The list is derived from `lualatex --recorder` traces over every file
+# in examples/*.tex AND scholatex.tex. To regenerate after a cls or
+# manual dependency change:
+#
+#   cd /tmp && mkdir t && cd t
+#   for f in <path-to-repo>/scholatex.tex <path-to-repo>/examples/*.tex; do
+#     cp "$f" main.tex
+#     TEXINPUTS=<path-to-repo>: LUAINPUTS=<path-to-repo>: \
+#       lualatex --recorder -interaction=nonstopmode main.tex >/dev/null 2>&1
+#     grep -oE 'INPUT [^ ]+\.(sty|cls|def|cfg|fd|tex|lua|cmap|clo)$' main.fls
+#   done | awk '{print $2}' | grep -oE '/tex/[^/]+/[^/]+/' \
+#        | sed -E 's|/tex/[^/]+/([^/]+)/|\1|' | sort -u
+#
+# Cross-check against `collection-latex` (transitive via scheme-basic) to
+# avoid re-listing pkgs already pulled in. The hyperref family
+# (bigintcalc, bitset, hycolor, intcalc, kvdefinekeys, ltxcmds, pdfescape,
+# refcount, rerunfilecheck, stringenc, uniquecounter, url, ...) all live
+# in collection-latex and need not be enumerated here:
+#
+#   tlmgr info --json collection-latex | jq -r '.[0].depends[]' | sort -u
+
+# l3build harness + scheme-basic
+scheme-basic
+l3build
+latex-bin
+luatex
+lualatex-math
+l3kernel
+l3packages
+l3experimental
+l3backend
+
+# scholatex.cls \RequirePackage list (27 entries)
+kvoptions
+amsmath
+amsfonts
+array
+graphics
+graphicx
+adjustbox
+xstring
+tabularx
+tabularray
+multirow
+xcolor
+colortbl
+enumitem
+ragged2e
+needspace
+tcolorbox
+tikzfill
+tikz-cd
+tkz-tab
+pgf
+pgfplots
+titlesec
+fontspec
+unicode-math
+geometry
+extsizes
+
+# Transitive deps surfaced by lualatex --recorder traces over the example
+# corpus. Without these, scheme-basic-only installs fail at \RequirePackage
+# time for tcolorbox / fontspec / unicode-math / tabularray and friends.
+collectbox            # adjustbox dep
+environ               # tcolorbox dep
+etoolbox              # tcolorbox dep
+pdfcol                # tcolorbox dep (TL 2026+ poster library)
+ninecolors            # tabularray dep
+varwidth              # tcolorbox dep
+ifoddpage             # adjustbox dep
+trimspaces            # tikz dep
+xkeyval               # adjustbox / pst-tools dep
+epstopdf-pkg          # graphicx graphics rule
+pdftexcmds            # oberdiek bundle
+infwarerr             # oberdiek bundle
+kvsetkeys             # oberdiek bundle
+lualibs               # luaotfload dep
+luaotfload            # fontspec dep
+lua-uni-algos         # luaotfload dep
+iftex                 # general convenience
+
+# Fonts pulled by fontspec / unicode-math
+lm
+lm-math
+
+# scholatex.tex (the user manual) direct \usepackage list. hyperref and
+# its full dep chain are already in collection-latex, as are array,
+# longtable, tools/. Only the three below need explicit listing.
+booktabs              # manual: \usepackage{booktabs}
+chngcntr              # manual: \counterwithin*{section}{part}
+fancyvrb              # manual: \DefineVerbatimEnvironment{slcode}{Verbatim}{...}

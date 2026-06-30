@@ -1,0 +1,25 @@
+\input{regression-test}
+% B5 — `warn_if_shadows` warns but still inserts the dead alias.
+%
+% scholatex.lua:43-55 detects a let name that shadows a built-in tag,
+% block, or style word; it prints a warning to stderr and STILL inserts
+% the entry into ALIAS / MACRO / BLOCKALIAS. Since dispatch always
+% prefers built-ins, the user's entry is dead -- but the warning text
+% says "ignored" which is technically correct only because nobody reads
+% the entry.
+%
+% This MWE redefines `box` as an alias. The let is "ignored" but the
+% ALIAS["box"] dict entry still exists. A clean implementation would
+% return early after the warning so the alias table is honest.
+%
+% The body uses the built-in <box> block normally.
+\documentclass[lang=en]{scholatex}
+\begin{document}
+
+let box = <line Navy>
+
+<box line:Navy fill:AliceBlue>{
+hello world
+}
+
+\end{document}

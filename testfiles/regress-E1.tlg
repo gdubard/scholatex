@@ -1,0 +1,7 @@
+This is a generated file for the l3build validation system.
+Don't change this file in any respect.
+scholatex: line 3: angle expects point names: angle(A) or angle(ABC)
+^^I./scholatex.lua:...: in function 'scholatex.transpile'
+^^I./scholatex.lua:...: in function 'scholatex.inject'
+***************
+Compilation 1 of test file completed with exit status 1

@@ -38,7 +38,8 @@ local function build_tcb_options(sl, opts)
 
   o[#o+1] = "boxrule=" .. (opts.boxrule or DEFAULT.boxrule) .. "mm"
 
-  local pad = opts.sep
+  local pad = opts.boxsep
+            or opts.sep
             or (sl.config and sl.config.padding)
             or DEFAULT.sep
   o[#o+1] = "boxsep=" .. pad .. "mm"

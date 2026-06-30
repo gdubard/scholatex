@@ -1,0 +1,13 @@
+\input{regression-test}
+% E3 — French error in scholatex-figure.lua:54: SSS triangle that
+% violates the triangle inequality.
+%
+% Trigger: triangle sides:(1, 1, 5) — clearly violates a+b > c.
+\documentclass[lang=en]{scholatex}
+\begin{document}
+
+<draw>{
+triangle ABC sides:(1,1,5)
+}
+
+\end{document}

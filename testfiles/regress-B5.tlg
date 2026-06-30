@@ -1,0 +1,5 @@
+This is a generated file for the l3build validation system.
+Don't change this file in any respect.
+scholatex: warning: 'let box' (line 3) shadows a built-in name and will be ignored; the built-in 'box' always takes precedence. Use a different alias name. [1
+***************
+Compilation 1 of test file completed with exit status 0

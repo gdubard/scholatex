@@ -7,3 +7,17 @@
 *.synctex.gz
 *.toc
 *.out
+
+CLAUDE.md
+AGENTS.md
+
+# l3build outputs
+build/
+scholatex.pdf
+scholatex-ctan.zip
+scholatex-ctan.curlopt
+scholatex.tds.zip
+
+# bash check-parallel work area
+tmp/
+

@@ -1,0 +1,104 @@
+name: CI
+
+# Run on:
+#   * PRs to main -- the gate
+#   * pushes directly to main (squash-merged PRs, hotfixes)
+#   * manual workflow_dispatch for ad-hoc reruns
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'llmdoc/**'
+      - '**/README.md'
+      - 'CHANGELOG.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.githooks/**'
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'llmdoc/**'
+      - '**/README.md'
+      - 'CHANGELOG.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.githooks/**'
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref to keep CI quota tight, but
+# disambiguate PR vs push events so they don't cancel each other.
+concurrency:
+  group: ci-${{ github.head_ref || github.ref_name }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
+
+env:
+  TL_VERSION: '2026'
+
+jobs:
+  check:
+    name: l3build check (luatex)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── TL bypass cache ─────────────────────────────────────────────
+      # setup-texlive-action's built-in cache is immutable per primary
+      # key, which makes weekly TL refresh awkward. We manage our own
+      # cache:
+      #
+      # key = tl-bypass-<os>-<TL_VERSION>-<ISO-week>-<hashFiles tl_packages>
+      #
+      # ISO-week rolls the cache forward every Monday so a stale TLnet
+      # mirror cache doesn't linger; tl_packages hash invalidates
+      # immediately when a package is added (otherwise a release run
+      # that needs the new package would restore the old cache and fail
+      # at compile time).
+      - name: Compute cache week
+        id: cache-week
+        run: echo "iso=$(date -u +'%G-W%V')" >> "$GITHUB_OUTPUT"
+
+      - name: TL bypass cache
+        id: tl-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/setup-texlive-action/${{ env.TL_VERSION }}
+          key: tl-bypass-${{ runner.os }}-${{ env.TL_VERSION }}-${{ steps.cache-week.outputs.iso }}-${{ hashFiles('.github/tl_packages') }}
+
+      # Cache hit: skip setup-texlive-action entirely, just export PATH.
+      - name: Export PATH (cache hit)
+        if: steps.tl-cache.outputs.cache-hit == 'true'
+        continue-on-error: true
+        run: |
+          TL_BIN="${{ runner.temp }}/setup-texlive-action/${{ env.TL_VERSION }}/bin/x86_64-linux"
+          echo "$TL_BIN" >> "$GITHUB_PATH"
+          "$TL_BIN/tlmgr" version
+
+      # Cache miss: run setup-texlive-action with its own cache off (we
+      # manage the cache via actions/cache above).
+      - name: Set up TeX Live (cache miss)
+        if: steps.tl-cache.outputs.cache-hit != 'true'
+        uses: TeX-Live/setup-texlive-action@v4
+        with:
+          version: ${{ env.TL_VERSION }}
+          package-file: .github/tl_packages
+          cache: false
+          update-all-packages: true
+
+      - name: l3build check (parallel, 4 buckets)
+        run: |
+          make check J=4
+
+      - name: Upload .diff artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: l3build-diff-${{ github.run_id }}
+          path: |
+            build/test*/**/*.diff
+            build/test*/**/*.log
+            tmp/parallel-check/**/build/test*/**/*.diff
+            tmp/parallel-check/**/build/test*/**/*.log
+          if-no-files-found: ignore
+          retention-days: 14

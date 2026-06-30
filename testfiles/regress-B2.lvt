@@ -1,0 +1,28 @@
+\input{regression-test}
+% B2 — `for x in [a,b,c]` items are always strings (`%q`-quoted).
+%
+% scholatex.lua:78-80 builds `local x = "<item>"` for every list item, even
+% numeric literals. This is a footgun for the common pattern "loop over
+% the integers 1, 2, 3" which a user might write either as `for n in 1..3`
+% (numeric range, works correctly) or as `for n in [1,2,3]` (the
+% bracketed list form -- string items, arithmetic silently breaks).
+%
+% This MWE iterates twice over (1, 2, 3) and shows the asymmetry:
+% the range form prints "1 + 1 = 2 / 2 + 1 = 3 / 3 + 1 = 4"
+% while the list form prints "1+1 / 2+1 / 3+1" (string concat, no arithmetic).
+%
+% A correct error or a numeric-cast would help.
+\documentclass[lang=en]{scholatex}
+\begin{document}
+
+Range form (works):
+for n in 1..3 {
+$#n + 1 = #{n + 1}$
+}
+
+List form (footgun):
+for n in [1, 2, 3] {
+$#n + 1 = #{n + 1}$
+}
+
+\end{document}

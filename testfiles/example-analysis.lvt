@@ -1,0 +1,210 @@
+\input{regression-test}
+% !TeX program = lualatex
+% =====================================================================
+%  analysis.tex
+%  Analysis in one chapter: big operators with an index (sum, product),
+%  limits — both the lim(...) operator and the arrow form written under
+%  a long arrow — trigonometry with upright function names, derivatives
+%  up to a differential equation and the heat equation, the vector
+%  operators (grad, div, curl, Laplacian, directional derivative), the
+%  whole integral family (primitive, definite, multiple, contour,
+%  principal value, average, surface, volume), the Landau notations and
+%  the integral transforms.
+% =====================================================================
+\documentclass[
+  margins=8,
+  font=Latin Modern Roman,
+  size=12,
+  linespread=1.4,
+  lang=en
+]{scholatex}
+\begin{document}
+
+let title = <Red b 18pt c>
+let h1    = <Navy b section>
+
+<title>scholatex — analysis
+
+% =====================================================================
+<h1>Operators with an index
+% =====================================================================
+
+A big operator carries its index in (...); its body follows freely
+and is set in display style so fractions stay full size.
+
+<box line:Indigo fill:Lavender radius:3 title:{Sum and product}>{
+	$sum(i=1, n) i = n(n+1)/2$ <3tab> $prod(k=1, n) k$
+}
+
+% =====================================================================
+<h1>Limits
+% =====================================================================
+
+A limit's (...) holds the approach, written with ->; the target
+sits under the word, as it should:
+
+<box line:Indigo fill:Lavender radius:3>{
+	$lim(x->0) f(x)$ <3tab> $lim(x->+inf) 1/x$
+}
+
+For the running phrase "$u_n$ tends to $l$" set under a long arrow, use
+arrow(...): the condition is written underneath, and to or ->
+read the same inside it.
+
+<box line:Indigo fill:Lavender radius:3 title:{A sequence converging}>{
+	$u_n arrow(n to +inf) l$ <3tab> $1/n arrow(n to +inf) 0$
+}
+
+% =====================================================================
+<h1>Trigonometry
+% =====================================================================
+
+Function names — sin, cos, tan, ln, exp and
+the rest — are set upright automatically, and a name glued to (...)
+takes its argument as one atom, so fractions behave.
+
+<box line:Crimson fill:MistyRose radius:3 title:{The fundamental identity}>{
+	$sin(x)^2 + cos(x)^2 = 1$
+}
+
+<box line:Crimson fill:MistyRose radius:3 title:{Addition formula}>{
+	$cos(a+b) = cos(a)cos(b) - sin(a)sin(b)$
+}
+
+<box line:Crimson fill:MistyRose radius:3>{
+	$tan(x) = sin(x)/cos(x)$ <3tab> $lim(x->0) sin(x)/x = 1$
+}
+
+% =====================================================================
+<h1>Derivatives and differential equations
+% =====================================================================
+
+A derivative is written as the fraction it is. The differential d is
+set upright (ISO 80000-2), matching the d of the integrals — but only
+when both sides of the fraction carry it, so a variable named d is left
+alone (d/2 stays a plain fraction).
+
+<box line:DarkOrange fill:OldLace radius:3 title:{Leibniz notation}>{
+	$dy/dx$ <3tab> $(d^2 y)/(dx^2)$ <3tab> $d/dx (x^2) = 2x$
+}
+
+A first-order differential equation reads in one line:
+
+<box line:DarkOrange fill:OldLace radius:3>{
+	$dy/dx + y = 0$
+}
+
+Partial derivatives use partial ($partial$); parenthesise each side so
+the fraction groups correctly. The heat equation, for instance:
+
+<box line:DarkOrange fill:OldLace radius:3 title:{The heat equation}>{
+	$(partial u)/(partial t) = (partial^2 u)/(partial x^2)$
+}
+
+% =====================================================================
+<h1>Differential operators
+% =====================================================================
+
+The first-order vector operators read as named operators: $grad(f)$ the
+gradient, $div(F)$ the divergence, $curl(F)$ the curl. The Laplacian is
+written $lap(f)$; it prefixes its operand without function parentheses, so
+$lap(f)$ stays bare, while a compound operand keeps its grouping, as in
+$lap(x^2 + y^2)$.
+
+<box line:DarkOrange fill:OldLace radius:3 title:{The Laplacian as divergence of the gradient}>{
+	$lap(f) = div(grad(f))$
+}
+
+The derivative of $f$ along a direction $u$ is $dirderiv(f, u)$, the gradient
+indexed by the direction.
+
+<box line:DarkOrange fill:OldLace radius:3 title:{Directional derivative}>{
+	$dirderiv(f, u) = grad(f) cdot u$
+}
+
+% =====================================================================
+<h1>Integrals: body and differential
+% =====================================================================
+
+An integral closes on a differential. Its head (...) names the
+variable; everything up to the end of the formula is the integrand, and the
+differential $dx$ is appended automatically.
+
+<box line:DarkGreen fill:Honeydew radius:3 title:{Primitive and definite integral}>{
+	$int(x) f(x)$ <3tab> $int(x=a, b) f(x)$
+}
+
+The head's variable is the differential, so a change of letter is just a
+change in the head: $int(t=0, 1) t^2$. To keep a term outside the
+integral, close the integrand in parentheses — these differ:
+
+<box line:DarkGreen fill:Honeydew radius:3>{
+	$(int(x=a, b) f(x)) + 1$ <3tab> $int(x=a, b) (f(x) + 1)$
+}
+
+% =====================================================================
+<h1>Multiple integrals
+% =====================================================================
+
+Separate several domains with ; inside the head. The count of
+domains chooses the single, double or triple integral sign; the
+differentials come out in reverse order, the Fubini convention.
+
+<box line:DarkGreen fill:Honeydew radius:3>{
+	$int(x=a, b ; y=c, d) f(x,y)$
+
+	$int(x=a, b ; y=c, d ; z=e, g) f(x,y,z)$
+}
+
+A single named domain is a region integral over that set, with the area
+element giving the surface form: $int(D) f$.
+
+% =====================================================================
+<h1>Contour, principal value, average
+% =====================================================================
+
+Three named integral operators round out the family: a contour integral
+$contourint(C) f(z)$, a Cauchy principal value $pvint(x=a, b) f(x)$, and
+the average (normalised) integral $meanint(x=a, b) f(x)$.
+
+<box line:DarkGreen fill:Honeydew radius:3 title:{The integral family}>{
+	$contourint(C) f(z)$ <3tab> $pvint(x=a, b) f(x)$ <3tab> $meanint(x=a, b) f(x)$
+}
+
+% =====================================================================
+<nextpage h1>Surface and volume integrals
+% =====================================================================
+
+The closed surface integral is $surfint(S)$ and the volume integral is
+$volint(V)$, both built on the integral signs unicode-math provides
+natively. A flux reads $flux(F, S)$.
+
+<box line:DarkGreen fill:Honeydew radius:3 title:{The divergence theorem}>{
+	$flux(F, S) = volint(V) div(F)$
+}
+
+% =====================================================================
+<h1>Landau notation
+% =====================================================================
+
+The asymptotic comparisons are the explicit words $bigO(...)$ and
+$litO(...)$, so the bare letters $o$ and $O$ stay free as variables.
+
+<box line:Indigo fill:Lavender radius:3 title:{A first-order expansion}>{
+	$exp(x) = 1 + x + litO(x)$ as $x to 0$
+
+	$sum(k=1, n) k = n^2/2 + bigO(n)$
+}
+
+% =====================================================================
+<h1>Integral transforms
+% =====================================================================
+
+The transforms name themselves: $laplace(f)$ and $fourier(f)$, with inverses
+$ilaplace(f)$ and $ifourier(f)$.
+
+<box line:Indigo fill:Lavender radius:3 title:{A transform pair}>{
+	$laplace(f)$ on one side, $ilaplace(laplace(f)) = f$ on the other.
+}
+
+\end{document}

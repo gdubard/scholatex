@@ -1,0 +1,22 @@
+\input{regression-test}
+% A2 — README's escape list omits `^`
+%
+% README.md:597 (Escape rules section) lists four characters that are
+% auto-escaped in prose: `_ & % ~`.
+%
+% Code at scholatex.lua:299-303 actually auto-escapes FIVE characters:
+% `_ & % ^ ~`. The standalone manual (scholatex.tex:361) is correct.
+%
+% This MWE just demonstrates that `^` in prose is automatically escaped
+% to a literal `^` character in the PDF (rather than raising a "missing $
+% inserted" error from LaTeX as it would in raw LaTeX). The bug is purely
+% README:597; this MWE confirms the code behavior so the issue can quote
+% the actual rule.
+\documentclass[lang=en]{scholatex}
+\begin{document}
+
+The caret character ^ should appear literally in this paragraph.
+
+So should 100 ^ 2 in the math-free context (as part of the sentence).
+
+\end{document}

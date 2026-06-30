@@ -1,0 +1,108 @@
+name: Doc
+
+# Compile scholatex.tex (the user manual) on every push so a manual-only
+# regression -- missing \usepackage, broken titlesec format, hyperref
+# breakage -- gets caught immediately instead of at release time.
+#
+# Why a separate workflow from ci.yml: ci.yml's paths-ignore drops doc-only
+# changes (README.md / CHANGELOG.md / llmdoc/**) so the testsuite doesn't
+# re-run on prose edits. The manual sits inside scholatex.tex which is
+# code-shaped (not ignored) but its real failure mode is "doc still
+# compiles?", not "does the regression suite pass?". Keeping the two
+# concerns in separate workflows means a manual edit triggers `make doc`
+# without paying the 30-minute timeout of the full check matrix, and a
+# code edit triggers the check matrix without paying for an extra
+# typeset run that the regression suite would catch anyway.
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'llmdoc/**'
+      - '**/README.md'
+      - 'CHANGELOG.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.githooks/**'
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'llmdoc/**'
+      - '**/README.md'
+      - 'CHANGELOG.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.githooks/**'
+  workflow_dispatch:
+
+concurrency:
+  group: doc-${{ github.head_ref || github.ref_name }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
+
+env:
+  TL_VERSION: '2026'
+
+jobs:
+  doc:
+    name: l3build doc (lualatex scholatex.tex)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── TL bypass cache (shared shape with ci.yml) ────────────────────
+      # Same cache key recipe as ci.yml so a single primed cache covers
+      # both workflows. See ci.yml for the rationale on the ISO-week +
+      # hashFiles(tl_packages) key.
+      - name: Compute cache week
+        id: cache-week
+        run: echo "iso=$(date -u +'%G-W%V')" >> "$GITHUB_OUTPUT"
+
+      - name: TL bypass cache
+        id: tl-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/setup-texlive-action/${{ env.TL_VERSION }}
+          key: tl-bypass-${{ runner.os }}-${{ env.TL_VERSION }}-${{ steps.cache-week.outputs.iso }}-${{ hashFiles('.github/tl_packages') }}
+
+      - name: Export PATH (cache hit)
+        if: steps.tl-cache.outputs.cache-hit == 'true'
+        continue-on-error: true
+        run: |
+          TL_BIN="${{ runner.temp }}/setup-texlive-action/${{ env.TL_VERSION }}/bin/x86_64-linux"
+          echo "$TL_BIN" >> "$GITHUB_PATH"
+          "$TL_BIN/tlmgr" version
+
+      - name: Set up TeX Live (cache miss)
+        if: steps.tl-cache.outputs.cache-hit != 'true'
+        uses: TeX-Live/setup-texlive-action@v4
+        with:
+          version: ${{ env.TL_VERSION }}
+          package-file: .github/tl_packages
+          cache: false
+          update-all-packages: true
+
+      - name: make doc
+        run: |
+          make doc
+
+      - name: Upload built manual
+        uses: actions/upload-artifact@v4
+        with:
+          name: scholatex-manual-${{ github.run_id }}
+          path: |
+            build/doc/scholatex.pdf
+            scholatex.pdf
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload .log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scholatex-doc-log-${{ github.run_id }}
+          path: |
+            build/doc/scholatex.log
+            scholatex.log
+          if-no-files-found: ignore
+          retention-days: 14

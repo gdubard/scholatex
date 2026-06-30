@@ -1,0 +1,149 @@
+name: Release
+
+# Triggered when a v<X.Y>[.<Z>][-rcN] tag is pushed (typically via
+# `make tag <ver> && git push origin <ver>`). Builds the CTAN zip, polls
+# CI for green on the tagged commit, then creates a GitHub prerelease
+# with the zip attached. The CTAN upload itself is a separate manual
+# workflow (release-ctan-upload.yml) so the operator can dry-run first.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  TL_VERSION: '2026'
+
+permissions:
+  contents: write   # for gh release create
+
+jobs:
+  release:
+    name: Build CTAN zip and create GitHub prerelease
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse tag
+        id: tag
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          if ! printf '%s' "$tag" | grep -qE '^v[0-9]+\.[0-9]+(\.[0-9]+)?(-rc[0-9]+)?$'; then
+            echo "::error::tag '$tag' does not match v<X.Y>[.<Z>][-rcN]"
+            exit 1
+          fi
+          ver="${tag#v}"
+          echo "tag=$tag"  >> "$GITHUB_OUTPUT"
+          echo "ver=$ver"  >> "$GITHUB_OUTPUT"
+          sha8=$(git rev-parse --short=8 HEAD)
+          echo "sha8=$sha8" >> "$GITHUB_OUTPUT"
+
+      # Same TL bypass-cache mechanism as ci.yml -- a release tag pushed
+      # in the same ISO week as the most recent CI run gets a cache hit
+      # and skips the ~3-5 min setup-texlive install.
+      - name: Compute cache week
+        id: cache-week
+        run: echo "iso=$(date -u +'%G-W%V')" >> "$GITHUB_OUTPUT"
+
+      - name: TL bypass cache
+        id: tl-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/setup-texlive-action/${{ env.TL_VERSION }}
+          key: tl-bypass-${{ runner.os }}-${{ env.TL_VERSION }}-${{ steps.cache-week.outputs.iso }}-${{ hashFiles('.github/tl_packages') }}
+
+      - name: Export PATH (cache hit)
+        if: steps.tl-cache.outputs.cache-hit == 'true'
+        continue-on-error: true
+        run: |
+          TL_BIN="${{ runner.temp }}/setup-texlive-action/${{ env.TL_VERSION }}/bin/x86_64-linux"
+          echo "$TL_BIN" >> "$GITHUB_PATH"
+          "$TL_BIN/tlmgr" version
+
+      - name: Set up TeX Live (cache miss)
+        if: steps.tl-cache.outputs.cache-hit != 'true'
+        uses: TeX-Live/setup-texlive-action@v4
+        with:
+          version: ${{ env.TL_VERSION }}
+          package-file: .github/tl_packages
+          cache: false
+          update-all-packages: true
+
+      - name: Build CTAN zip
+        run: make ctan
+
+      - name: Rename asset
+        id: asset
+        run: |
+          src=$(ls build/distrib/ctan/*.zip 2>/dev/null | head -1)
+          if [ -z "$src" ]; then
+            echo "::error::no CTAN zip produced by l3build ctan"
+            exit 1
+          fi
+          dst="scholatex-${{ steps.tag.outputs.tag }}-${{ steps.tag.outputs.sha8 }}.zip"
+          cp "$src" "$dst"
+          echo "asset=$dst" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          ver="${{ steps.tag.outputs.ver }}"
+          if scripts/extract-changelog.sh "$ver" > release-notes.md 2>/dev/null; then
+            echo "::notice::release notes from CHANGELOG.md section $ver"
+          else
+            prev_tag=$(git describe --tags --abbrev=0 --exclude="${{ steps.tag.outputs.tag }}" 2>/dev/null || true)
+            if [ -n "$prev_tag" ]; then
+              echo "::notice::CHANGELOG section for $ver not found; falling back to git log $prev_tag..HEAD"
+              git log --pretty='- %s' "$prev_tag"..HEAD > release-notes.md
+            else
+              echo "Release scholatex $ver" > release-notes.md
+            fi
+          fi
+          echo '--- release notes preview ---'
+          head -40 release-notes.md
+
+      - name: Wait for CI on this commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Poll the CI run on this commit; require success before publishing.
+          # We only block on workflows other than this one to avoid self-deadlock.
+          sha="${{ github.sha }}"
+          deadline=$(( $(date +%s) + 1800 ))   # 30 min budget
+          while :; do
+            now=$(date +%s)
+            if [ "$now" -ge "$deadline" ]; then
+              echo "::error::timed out waiting for CI"
+              exit 1
+            fi
+            json=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$sha&per_page=50")
+            # Find non-Release runs and inspect their statuses.
+            statuses=$(echo "$json" | jq -r '.workflow_runs[] | select(.name != "Release") | "\(.name)\t\(.status)\t\(.conclusion)"')
+            if [ -z "$statuses" ]; then
+              echo "no non-Release runs yet for $sha; sleeping..."
+              sleep 30; continue
+            fi
+            echo "$statuses"
+            if echo "$statuses" | awk -F'\t' '{ if ($2!="completed") exit 1 }'; then
+              if echo "$statuses" | awk -F'\t' '{ if ($3!="success") exit 1 }'; then
+                echo "CI passed on $sha"; break
+              else
+                echo "::error::CI failed on $sha"
+                exit 1
+              fi
+            else
+              echo "CI still running; sleeping..."
+              sleep 30
+            fi
+          done
+
+      - name: Create GitHub prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.tag.outputs.tag }}" \
+            "${{ steps.asset.outputs.asset }}" \
+            --prerelease \
+            --title "scholatex ${{ steps.tag.outputs.tag }}" \
+            --notes-file release-notes.md

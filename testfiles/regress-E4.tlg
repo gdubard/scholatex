@@ -1,0 +1,8 @@
+This is a generated file for the l3build validation system.
+Don't change this file in any respect.
+scholatex: execution error
+./scholatex-figure.lua:...: scholatex: triangle — the two given angles sum to 180 degrees or more
+^^I./scholatex.lua:...: in function 'scholatex.transpile'
+^^I./scholatex.lua:...: in function 'scholatex.inject'
+***************
+Compilation 1 of test file completed with exit status 1

@@ -1,0 +1,182 @@
+\input{regression-test}
+% !TeX program = lualatex
+% =====================================================================
+% 04-functions.tex --- Three complete function studies, eight steps each.
+%
+% Each study follows the eight-step method (Müller). The table at step 6
+% carries three lines -- f'' (convexity), f' (growth), f (variation) --
+% all from one shared <fn> object; the plot at step 8 comes from the same
+% object. Sections in ROMAN, steps as plain numbers.
+%
+% The f'' line is optional in scholatex (attribute second:). It is shown
+% here because convexity is one of the eight steps; for lower grades it
+% would simply be omitted.
+% =====================================================================
+\documentclass[margins=15, size=12, lang=en]{scholatex}
+\begin{document}
+
+let title = <Navy b 18pt c>
+let study = <Navy b section ROMAN>
+let step  = <Navy b subsection roman >
+let p     = <tab>
+
+<title>Function studies
+
+% ====================================================================
+<line>
+<study title:{Polynomial: $f(x) = -x^4 + 2x^2 + 1$}>{
+<p>An even quartic.
+}
+
+let f = <fn name:{f(x)}
+            expr:{-x^4 + 2x^2 + 1}
+            x:{-inf | -1 | -1/sqrt(3) | 0 | 1/sqrt(3) | 1 | +inf}
+            second:{- | - | + | + | - | -}
+            deriv:{+ | + | + | - | - | -}
+            var:{-inf / 2 \ 1 / 2 \ -inf}>
+
+<step title:{Domain}>{
+<p>$f$ is a polynomial: its domain is all of $R$.
+}
+
+<step title:{Parity}>{
+<p>$f(-x) = -x^4 + 2x^2 + 1 = f(x)$, so $f$ is even; the graph is
+symmetric about the $y$-axis.
+}
+
+<step title:{Sign}>{
+<p>$f(0) = 1 > 0$ and $f$ tends to $-inf$ at both ends, so $f$ vanishes
+at two symmetric points and is positive between them, negative outside.
+}
+
+<step title:{Vertical asymptotes}>{
+<p>None: $f$ is defined and continuous on all of $R$.
+}
+
+<step title:{Affine asymptotes}>{
+<p>None: a quartic grows faster than any line, the ratio of $f(x)$ to $x$ tends to $+- inf$. There is no affine asymptote.
+}
+
+<step title:{Growth and critical points}>{
+<p>$f'(x) = -4x^3 + 4x = 4x(1 - x^2)$ vanishes at $-1$, $0$, $1$: two
+maxima $f(-1) = f(1) = 2$ and a local minimum $f(0) = 1$.
+}
+
+<step title:{Convexity and inflection points}>{
+<p>$f''(x) = -12x^2 + 4 = 4(1 - 3x^2)$ vanishes at $+- 1/sqrt(3)$:
+$f$ is convex between them and concave outside, with two inflection
+points. The table gathers $f''$, $f'$ and $f$.
+}
+
+<vartab f>
+
+<step title:{Graph}>{
+<plot f samples:200 x:{-2, 2} y:{-3, 3}>
+}
+
+% ====================================================================
+<study title:{Rational, horizontal asymptote: $g(x) = x^2/(x^2-2x+2)$}>{
+<p>Denominator without real root.
+}
+
+let g = <fn name:{g(x)}
+            expr:{x^2/(x^2 - 2x + 2)}
+            x:{-inf | 1-sqrt(3) | 0 | 1 | 2 | 1+sqrt(3) | +inf}
+            second:{- | + | + | - | - | +}
+            deriv:{- | - | + | + | - | -}
+            var:{1 \ 0 / 2 \ 1}>
+
+<step title:{Domain}>{
+<p>The discriminant of $x^2 - 2x + 2$ is $-4 < 0$, so the denominator
+never vanishes: $g$ is defined on $R$.
+}
+
+<step title:{Parity}>{
+<p>$g(-x) != g(x)$ and $g(-x) != -g(x)$: $g$ is neither even nor
+odd.
+}
+
+<step title:{Sign}>{
+<p>$g(x) = x^2 / (x^2 - 2x + 2)$ is a ratio of a square by a positive
+quantity, so $g(x) >= 0$, vanishing only at $x = 0$.
+}
+
+<step title:{Vertical asymptotes}>{
+<p>None: the denominator never vanishes.
+}
+
+<step title:{Horizontal asymptote}>{
+<p>$g(x)$ tends to $1$ as $x$ tends to $+- inf$, so the line $y = 1$
+is a horizontal asymptote on both sides.
+}
+
+<step title:{Growth and critical points}>{
+<p>$g'(x) = 2x(2-x)/(x^2-2x+2)^2$ vanishes at $0$ and $2$: a minimum
+$g(0) = 0$ and a maximum $g(2) = 2$.
+}
+
+<step title:{Convexity and inflection points}>{
+<p>$g''$ vanishes at $1-sqrt(3)$, $1$ and $1+sqrt(3)$, giving three
+inflection points. The table gathers $g''$, $g'$ and $g$.
+}
+
+<vartab g>
+
+<step title:{Graph}>{
+<plot g samples:200 x:{-6, 6} y:{-1, 3}>
+}
+
+% ====================================================================
+<study title:{Rational, vertical asymptote: $k(x) = (x^2+1)/(x-1)$}>{
+<p>A pole at $x = 1$ and an affine asymptote.
+}
+
+let k = <fn name:{k(x)}
+            expr:{(x^2+1)/(x-1)}
+            x:{-inf | 1-sqrt(2) | 1 | 1+sqrt(2) | +inf}
+            second:{- | - || + | +}
+            deriv:{+ | - || - | +}
+            var:{-inf / 2-2sqrt(2) \ -inf || +inf \ 2+2sqrt(2) / +inf}>
+
+<step title:{Domain}>{
+<p>The denominator $x - 1$ vanishes at $x = 1$: the domain is
+$]-inf, 1[$ union $]1, +inf[$.
+}
+
+<step title:{Parity}>{
+<p>The domain is not centred at $0$, so $k$ is neither even nor odd.
+}
+
+<step title:{Sign}>{
+<p>$x^2 + 1 > 0$ always, so $k(x)$ has the sign of $x - 1$: negative on
+$]-inf, 1[$, positive on $]1, +inf[$.
+}
+
+<step title:{Vertical asymptote}>{
+<p>At $x = 1$, $k(x)$ tends to $-inf$ on the left and $+inf$ on the
+right: the line $x = 1$ is a vertical asymptote.
+}
+
+<step title:{Affine asymptote}>{
+<p>Dividing gives $k(x) = x + 1 + 2/(x-1)$, so $k(x) - (x+1)$ tends to
+$0$: the line $y = x + 1$ is an affine asymptote.
+}
+
+<step title:{Growth and critical points}>{
+<p>$k'(x) = (x^2-2x-1)/(x-1)^2$ vanishes at $1 +- sqrt(2)$: a maximum
+$k(1-sqrt(2)) = 2 - 2sqrt(2)$ and a minimum $k(1+sqrt(2)) = 2 + 2sqrt(2)$.
+}
+
+<step title:{Convexity}>{
+<p>$k''(x) = 4/(x-1)^3$ never vanishes but changes sign at the pole:
+$k$ is concave on $]-inf, 1[$ and convex on $]1, +inf[$, with no
+inflection point. The table gathers $k''$, $k'$ and $k$.
+}
+
+<vartab k>
+
+<step title:{Graph}>{
+<plot k samples:200 x:{-4, 6} y:{-10, 12}>
+}
+
+\end{document}

@@ -1,3 +1,4 @@
+\input{regression-test}
 % !TeX program = lualatex
 % =====================================================================
 %  01-text-style.tex

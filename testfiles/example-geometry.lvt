@@ -1,0 +1,265 @@
+\input{regression-test}
+% !TeX program = lualatex
+% =====================================================================
+%  geometry.tex
+%  Geometric notation in the inline mini-language: the geometric angle,
+%  parallel / perpendicular / congruent relations, vectors with the dot
+%  and cross products written infix, and the named operators of plane
+%  and vector geometry (collinearity, distance, midpoint, inner product,
+%  orthogonal complement, orthogonal projection, scalar triple product).
+%  lang=en keeps the decimal point.
+% =====================================================================
+\documentclass[
+  margins=8,
+  font=Latin Modern Roman,
+  size=12,
+  linespread=1.4,
+  lang=en
+]{scholatex}
+\begin{document}
+
+let title = <Red b 18pt c>
+let h1    = <Navy b section>
+
+<title>scholatex — geometry
+
+% =====================================================================
+<h1>Angles
+% =====================================================================
+
+The geometric angle is $angle(ABC)$, written with the hat as in the
+French convention. A single point gives $angle(A)$, three points name the
+angle by its vertex in the middle. A right angle reads $angle(ABC) = 90$
+degrees.
+
+<box line:Navy fill:AliceBlue radius:2 title:{A right-angled triangle}>{
+In a triangle $ABC$ right-angled at $B$, the angle $angle(ABC)$ is the
+right angle, while $angle(BAC)$ and $angle(BCA)$ are the two acute angles.
+}
+
+% =====================================================================
+<h1>Parallel, perpendicular, congruent
+% =====================================================================
+
+Two lines are parallel, $(AB) parallel (CD)$, or perpendicular,
+$(AB) perp (CD)$. The negation reads $(AB) !parallel (CD)$. Two figures
+are congruent with $ABC cong A'B'C'$, similar with $ABC sim A'B'C'$.
+
+% =====================================================================
+<h1>Vectors: dot and cross products
+% =====================================================================
+
+A vector is $vec(u)$, its norm $norm(vec(u))$. The dot product is written
+infix, $vec(u) . vec(v)$, and the cross product likewise, $vec(u) ^ vec(v)$.
+Only a vector on both sides triggers them: $vec(u)^2$ stays a square and
+$norm(vec(u))^2$ a squared norm.
+
+<box line:Navy fill:AliceBlue radius:2 title:{Norm from the dot product}>{
+The square of the norm is the dot product of a vector with itself:
+$norm(vec(u))^2 = vec(u) . vec(u)$. Two vectors are orthogonal when
+$vec(u) . vec(v) = 0$.
+}
+
+Collinearity reads $collinear(u, v)$, orthogonality of two vectors
+$vec(u) perp vec(v)$.
+
+% =====================================================================
+<h1>Distance, midpoint
+% =====================================================================
+
+The distance between two points is $distance(A, B)$, and the midpoint of
+a segment is $midpoint(A, B)$.
+
+% =====================================================================
+<h1>Higher vocabulary
+% =====================================================================
+
+The inner product of an abstract space is $inner(u, v)$, the orthogonal
+complement of a subspace $ortho(F)$, and the orthogonal projection of a
+vector onto it $orthogonalprojection(F, x)$. The scalar triple product of
+three vectors is $triple(u, v, w)$.
+
+<box line:Navy fill:AliceBlue radius:2 title:{The Cauchy–Schwarz inequality}>{
+For any two vectors, $abs(vec(u) . vec(v)) <= norm(vec(u)) norm(vec(v))$,
+with equality exactly when $collinear(u, v)$.
+}
+
+% =====================================================================
+<h1>Coordinate system and plane figures
+% =====================================================================
+
+A coordinate system is $frame(O, i, j)$ in the plane, $frame(O, i, j, k)$
+in space; the origin stays bare and each basis vector is arrowed. A
+numbered basis works the same way: $frame(O, e_1, e_2)$.
+
+The figure symbols read directly: a triangle $triangle(ABC)$, an arc
+$arc(AB)$, a right angle $rightangle$, a parallelogram $parallelogram$.
+A circle is $circle(O, r)$ by centre and radius, or $circle(A, B, C)$
+through three points.
+
+An orthonormal coordinate system is $orthoframe(O, i, j)$. An angle in
+degrees reads 45° directly, or $angle(ABC) = 90°$ in a formula.
+
+% =====================================================================
+<h1>Vector components
+% =====================================================================
+
+A vector given by its components reads inline $vector(3, 5)$ or as a
+column $colvec(3, 5)$; in space, $vector(1, 2, 3)$ and $colvec(1, 2, 3)$.
+
+let u = vector(3, 5)
+With $u$ stored, its first component is #{u[1]} and its squared norm is
+#{u[1]*u[1] + u[2]*u[2]}.
+
+% =====================================================================
+<h1>Drawing figures: the draw block
+% =====================================================================
+
+The «draw» block draws a figure from its description alone — the author
+gives the shape and the measurements, and the coordinates are computed and
+placed automatically. One drawing unit is one centimetre, so a side given as
+DK:6 measures 6 cm on the page. Equal sides and right angles are coded only
+with marks:on; side lengths are shown with measures:cm or measures:mm. A
+figure wider than the page is the cue to adjust the measurements before
+printing.
+
+An equilateral triangle of side 5, with the equal sides coded and each
+length labelled in centimetres:
+
+<draw>triangle ABC equilateral side:5 marks:on measures:cm
+
+A right triangle, the right angle at A, legs 4 and 3, lengths in millimetres:
+
+<draw>triangle ABC right sides:(4,3) marks:on measures:mm
+
+A rhombus, a square and an equilateral triangle, each sharing a side with
+the previous one. Only the first figure states its side: the others deduce
+theirs from the shared edge, and each piece is flipped to the far side so
+they abut instead of overlapping.
+
+<draw>{
+	rhombus ABEF side:4 angle:60
+	square ABCD marks:on
+	triangle BCG equilateral
+	triangle ADK right:D DK:6 measures:cm
+}
+
+A triangle is also fixed by its three sides named one by one, AB:3 BC:4
+CA:5 being exactly sides:(3,4,5) — the side AB first, then BC, then CA:
+
+<draw>triangle ABC AB:3 BC:4 CA:5 measures:cm
+
+A kite has two pairs of adjacent equal sides — the two upper sides equal,
+the two lower sides equal, the apex angle between the upper pair. With
+marks:on the two pairs are told apart by their ticks: a single tick on the
+two upper sides, a double tick on the two lower ones, so the figure never
+reads as a rhombus:
+
+<draw>kite ABCD sides:(3,5) angle:80 marks:on measures:cm
+
+A rectangle and a parallelogram share the same equality pattern — opposite
+sides equal in pairs — so marks:on ticks one pair once and the other twice,
+telling the two pairs apart. The rectangle adds the right-angle square at a
+corner:
+
+<draw>rectangle ABCD sides:(5,3) marks:on measures:cm
+
+<draw>parallelogram ABCD sides:(5,3) angle:65 marks:on measures:cm
+
+A trapezoid is given by its two parallel bases and its height. With the
+default placement the legs come out equal — an isosceles trapezoid — so the
+two bases are the unequal pair:
+
+<draw>trapezoid ABCD bases:(6,3) height:3 measures:cm
+
+The regular polygons read by name from the pentagon up; polygon with as
+many points as wanted works the same way:
+
+<draw>pentagon ABCDE side:3
+<draw>hexagon ABCDEF side:2
+
+A circle is given by its centre and a radius (or a diameter). The radius may
+be a number, or a segment named by two placed points — radius:AB is the
+compass opened to the span A–B:
+
+<draw>circle O radius:3 measures:cm
+
+Named after three already-placed points, the circle is their circumscribed
+circle; add inscribed for the incircle of the triangle they form:
+
+<draw>{
+	triangle ABC sides:(4,5,6)
+	circle ABC
+}
+
+<draw>{
+	triangle ABC sides:(5,5,4)
+	circle ABC inscribed
+}
+
+% =====================================================================
+<h1>Point names, loops, and rotation
+% =====================================================================
+
+Point names are single letters written glued together — triangle ABC names
+the points A, B and C. When a figure needs many points, or names with a
+digit, they are written instead as a parenthesised, comma-separated list:
+triangle (O, A0, B0). The rule is one of the first character: an opening
+parenthesis introduces the list form, anything else is the glued form.
+
+A draw block accepts the same loops as the rest of the language, written
+for VARIABLE in FROM..TO { ... }. Inside a loop, ##k inserts the value of the
+loop variable and ##{...} evaluates an expression, so point names and
+measurements can be generated. The attribute rotate:θ turns a figure by θ
+degrees about its first point.
+
+Twelve isosceles triangles sharing an apex, each stepped 30° from the last,
+fan out into a full turn. labels:off hides the vertex names, which would
+otherwise crowd the centre:
+
+<draw>{
+	for k in 0..11 {
+		triangle (O, A#k, B#k) isosceles side:4 base:2 rotate:#{k*30} labels:off
+	}
+}
+
+A narrower base and a 45° step give an eight-pointed rosette:
+
+<draw>{
+	for k in 0..7 {
+		triangle (O, A#k, B#k) isosceles side:5 base:1.5 rotate:#{k*45} labels:off
+	}
+}
+
+% =====================================================================
+<h1>Points and segments by coordinate
+% =====================================================================
+
+Below the named figures sit two low-level primitives. A point is placed at
+explicit coordinates and a segment is drawn between two points. Coordinates
+are declared once with let NAME = {x, y}, then referred to by name:
+
+let P0 = {-1.6, -2.3}
+let P1 = {-1, 1.5}
+let P2 = {2.7, 3.1}
+
+<draw>{
+	point(P0)
+	point(P1)
+	point(P2)
+	line(P1, P2)
+}
+
+An argument may also be a literal pair, and a segment takes measures: just
+as a figure side does. Because each coordinate is an ordinary expression,
+a loop can compute endpoints — twelve rays stepped 30° around a disc make a
+sun:
+
+<draw>{
+	circle O radius:1.2
+	for k in 0..11 {
+		line({1.2*math.cos(k*math.pi/6), 1.2*math.sin(k*math.pi/6)}, {2.4*math.cos(k*math.pi/6), 2.4*math.sin(k*math.pi/6)})
+	}
+}
+
+\end{document}

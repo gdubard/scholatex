@@ -1,0 +1,14 @@
+\input{regression-test}
+% E2 — French error in scholatex-figure.lua:41: triangle isosceles with
+% `side` shorter than half the base.
+%
+% Trigger: declare an isosceles triangle with side:1 base:10 — the equal
+% sides are too short to span the base.
+\documentclass[lang=en]{scholatex}
+\begin{document}
+
+<draw>{
+triangle ABC isosceles side:1 base:10
+}
+
+\end{document}

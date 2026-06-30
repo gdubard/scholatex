@@ -1,0 +1,171 @@
+name: CTAN upload
+
+# Manual second stage of the release flow. Triggered only via
+# workflow_dispatch so the operator can choose dry-run vs live and
+# supply uploader / email / note interactively.
+#
+# Expects an existing GitHub prerelease produced by release.yml (the
+# CTAN zip is downloaded from that release rather than rebuilt). On
+# successful live upload, flips the GitHub release from prerelease to
+# --latest.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to upload (e.g. v2.4)"
+        required: true
+        type: string
+      uploader:
+        description: "CTAN form: uploader real name"
+        required: true
+        type: string
+      email:
+        description: "CTAN form: contact email for reviewer reply"
+        required: true
+        type: string
+      note:
+        description: "CTAN form: internal note (<= 4096 bytes), optional"
+        required: false
+        type: string
+        default: ''
+      dry_run:
+        description: "Dry-run only? (true = no actual CTAN submission)"
+        required: true
+        type: boolean
+        default: true
+
+env:
+  TL_VERSION: '2026'
+
+permissions:
+  contents: write   # for gh release edit
+
+jobs:
+  upload:
+    name: l3build upload (dry-run = ${{ inputs.dry_run }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # On live uploads, gate behind a protected GH environment so a
+    # required reviewer must approve before the job runs. Dry-runs
+    # skip the gate so anyone with workflow_dispatch can trial them.
+    environment: ${{ inputs.dry_run && '' || 'ctan-release' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Validate inputs
+        run: |
+          tag="${{ inputs.tag }}"
+          if ! printf '%s' "$tag" | grep -qE '^v[0-9]+\.[0-9]+(\.[0-9]+)?(-rc[0-9]+)?$'; then
+            echo "::error::tag '$tag' does not match v<X.Y>[.<Z>][-rcN]"
+            exit 1
+          fi
+          note="${{ inputs.note }}"
+          if [ "$(printf '%s' "$note" | wc -c)" -gt 4096 ]; then
+            echo "::error::note exceeds CTAN's 4096-byte limit"
+            exit 1
+          fi
+
+      - name: Set up TeX Live
+        uses: TeX-Live/setup-texlive-action@v4
+        with:
+          version: ${{ env.TL_VERSION }}
+          packages: |
+            scheme-minimal
+            l3build
+            luatex
+          cache: true
+
+      - name: Download release zip
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p build/distrib/ctan
+          gh release download "${{ inputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --pattern '*.zip' \
+            --dir build/distrib/ctan
+          # l3build upload's uploadfile is "scholatex-ctan.zip"
+          # resolved relative to CWD (the repo root), NOT relative to
+          # build/distrib/ctan/. A local `make ctan` happens to also
+          # drop a copy at the repo root, which is why the upload step
+          # works there but failed on the CI runner. Mirror that
+          # behaviour explicitly here: keep the download under
+          # build/distrib/ctan/ for symmetry with `make ctan`, AND
+          # copy a fresh file to the repo root so l3build can find it.
+          src=$(ls build/distrib/ctan/*.zip | head -1)
+          dst="build/distrib/ctan/scholatex-ctan.zip"
+          if [ "$src" != "$dst" ]; then
+            mv "$src" "$dst"
+          fi
+          cp "$dst" scholatex-ctan.zip
+          ls -la build/distrib/ctan/ scholatex-ctan.zip
+
+      - name: l3build upload
+        env:
+          CTAN_UPLOADER: ${{ inputs.uploader }}
+          CTAN_EMAIL:    ${{ inputs.email }}
+          CTAN_NOTE:     ${{ inputs.note }}
+        run: |
+          # l3build upload has two stdin pitfalls we need to defuse, in
+          # this order:
+          #
+          # 1. uploadconfig.announcement is mandatory. If not supplied,
+          #    l3build calls input_multi_line_field("announcement")
+          #    which reads stdin until 3 blank returns or EOF, eating
+          #    every byte we try to feed for the y/n prompt later.
+          #    Pass `--file <announcement.md>` to short-circuit the
+          #    interactive read; l3build then uses the file contents
+          #    as the announcement and skips the prompt entirely.
+          #    See l3build-upload.lua:98-103, 305-360.
+          #
+          # 2. After validation, l3build ALWAYS prompts
+          #    "Do you want to upload to CTAN? [y/n]" -- even with
+          #    --dry-run. Root cause is a l3build (TL 2026) design bug:
+          #    `if options["dry-run"] then ctanupload = false end` sets
+          #    ctanupload to false, then l3build-variables.lua runs
+          #    `ctanupload = ctanupload or "ask"` which overwrites the
+          #    explicit false with the truthy "ask" sentinel (Lua's
+          #    `or` doesn't distinguish false from nil). So --dry-run
+          #    still waits on stdin; if stdin is EOF, `io.read()`
+          #    returns nil and the script crashes at
+          #    `string.lower(nil, 1, 1)`. Mirror ctex-kit's workaround
+          #    (release-ctan-upload.yml:455): pipe a single answer +
+          #    newline via `printf` to satisfy the unwanted prompt.
+          #    n in dry-run keeps the upload local; y in live mode
+          #    confirms.
+          #
+          # --email is also passed explicitly on the CLI as a belt-
+          # and-braces backstop in case build.lua doesn't read the env
+          # var.
+          ANN=/tmp/scholatex-announcement.md
+          {
+            echo "scholatex ${{ inputs.tag }} dry-run / pre-release"
+            echo ""
+            echo "Tag: ${{ inputs.tag }}"
+            echo "Dispatched by: ${{ github.actor }}"
+          } > "$ANN"
+          ARGS=(--file "$ANN" --email "${{ inputs.email }}")
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS+=(--dry-run)
+            ANSWER=n
+            echo "::notice::dry-run upload (no actual CTAN submission)"
+          else
+            ANSWER=y
+            echo "::warning::LIVE upload to CTAN"
+          fi
+          echo "l3build upload ${ARGS[*]}"
+          printf '%s\n' "$ANSWER" | l3build upload "${ARGS[@]}"
+
+      - name: Promote release to latest
+        if: ${{ inputs.dry_run == false }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "${{ inputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --prerelease=false \
+            --latest
+          echo "::notice::release ${{ inputs.tag }} marked as latest"

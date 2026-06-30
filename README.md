@@ -594,7 +594,7 @@ Loops and conditions work in the document body, inside boxes, and inside table b
 
 ## Escapes
 
-To print a character that scholatex treats specially, **double it**: `<<` `>>` `{{` `}}` `##` give a literal `<` `>` `{` `}` `#`. The backslash is an ordinary character — a path like `C:\Users\Leo` or a regex `\d+\s*\w` prints verbatim, nothing to escape. The characters `_ & % ~` are escaped automatically. A line break inside a paragraph is the tag `<nextline>`. A line whose first non-space character is `%` is a comment. A bare `#` not followed by a name or `{…}` is a literal `#`.
+To print a character that scholatex treats specially, **double it**: `<<` `>>` `{{` `}}` `##` give a literal `<` `>` `{` `}` `#`. The backslash is an ordinary character — a path like `C:\Users\Leo` or a regex `\d+\s*\w` prints verbatim, nothing to escape. The characters `_ & % ^ ~` are escaped automatically. A line break inside a paragraph is the tag `<nextline>`. A line whose first non-space character is `%` is a comment. A bare `#` not followed by a name or `{…}` is a literal `#`.
 
 Braces carry structure, so a **literal brace must be balanced**: write the pair `{{…}}` to print `{…}`. A lone, unmatched `{{` or `}}` is reported as an unbalanced brace naming its line, rather than silently corrupting the surrounding block — so set-builder notation like `{{ x : x > 0 }}` is written as a pair. Angle brackets and hashes need no such balancing; only braces do.
 
@@ -644,17 +644,21 @@ Setting `untrusted=true` in `\documentclass[...]{scholatex}` runs that Lua in a 
 
 ## Examples
 
-The `examples/` folder contains six self-contained, fully commented documents that together exercise every feature:
+The `examples/` folder contains eleven self-contained, fully commented documents that together exercise every feature:
 
 | File | Covers |
 |------|--------|
 | `text-style.tex` | the case rule, styles, colours, fonts, sizes, alignment, tabs, skips, scripts; **factoring styles into aliases**; a table of contents from the heading keywords |
 | `containers.tex` | tables, boxes and the named-area grid, each built up from its simplest form to a full worksheet header |
 | `basics.tex` | the inline mini-language, number sets, quantifiers and connectives, negation with `!`, set relations, the integer part, the overline, and arithmetic helpers |
+| `math-language.tex` | a tour of the math mini-language built progressively from quantifiers to integrals |
+| `math-analysis.tex` | analysis-flavoured math snippets: limits, derivatives, integrals, transforms |
+| `math-algebra.tex` | algebra-flavoured math snippets: matrices, linear-algebra vocabulary |
 | `analysis.tex` | operators with an index, limits (including the `arrow` form), trigonometry, derivatives, the vector operators, the integral family, transforms |
 | `algebra.tex` | the matrix / determinant / augmented-matrix / system blocks, and the linear-algebra vocabulary |
 | `probability.tex` | counting, probability and expectation, variance, distributions, density |
 | `functions.tex` | full function studies — `<fn>`, `<vartab>` and `<plot>` over polynomial, rational-with-horizontal-asymptote and rational-with-pole examples |
+| `geometry.tex` | the `<draw>` block — triangles, quadrilaterals, regular polygons, circles, composite figures, and the inline-math geometry vocabulary |
 
 Compile any of them with `lualatex <file>.tex` from the `examples/` folder.
 

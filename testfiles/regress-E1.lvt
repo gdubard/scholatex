@@ -1,0 +1,11 @@
+\input{regression-test}
+% E1 — French error string in scholatex-math.lua:369-370.
+%
+% Trigger: write bare `angle` without arguments. The hat-angle dispatcher
+% requires `angle(...)`; a bare `angle` raises the French validation error.
+\documentclass[lang=en]{scholatex}
+\begin{document}
+
+$angle + 1$
+
+\end{document}

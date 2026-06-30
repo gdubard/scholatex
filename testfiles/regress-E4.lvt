@@ -1,0 +1,13 @@
+\input{regression-test}
+% E4 — French error in scholatex-figure.lua:60: ASA triangle where the
+% two given angles sum to >= 180 degrees.
+%
+% Trigger: angles:(95, 90) — sum is 185, no third angle is possible.
+\documentclass[lang=en]{scholatex}
+\begin{document}
+
+<draw>{
+triangle ABC angles:(95,90) side:5
+}
+
+\end{document}

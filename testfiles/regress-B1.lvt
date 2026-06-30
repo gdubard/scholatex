@@ -1,0 +1,21 @@
+\input{regression-test}
+% B1 — block opener `{` not at line end → cryptic
+% `unknown tag attribute: 'box'` instead of an explicit "block-form requires
+% { at end of line" error.
+%
+% scholatex.lua:402 regex `^%s*<(%a[%w_]*)%s*(.-)>%s*{%s*$` requires the `{`
+% to be the last non-whitespace character on its line. Putting body content
+% on the same line as the opener silently flips dispatch to the inline-tag
+% path; the inline-tag path then can't resolve `box` as a style word and
+% errors at scholatex-style.lua:201.
+%
+% This MWE triggers the bug. A user with a one-line `<box ...>{ body }`
+% intent should get either a working compile or a helpful "block-form
+% requires `{` at end of line" message; instead they get the unrelated
+% `unknown tag attribute: 'box'`.
+\documentclass[lang=en]{scholatex}
+\begin{document}
+
+<box Navy>{ this body is on the same line as the opener }
+
+\end{document}

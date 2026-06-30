@@ -1,0 +1,41 @@
+\input{regression-test}
+% A1 — `<box>` ignores `boxsep:` option
+%
+% README:515 documents `<box>` options including `boxsep:N` (per-box
+% padding override). The standalone manual scholatex.tex:449 says the
+% same.
+% README:129 documents `sep:N` separately as the per-box override of
+% the class-level `padding` option (so a user reading the *class option*
+% table also encounters `sep:N`).
+%
+% Code at scholatex-box.lua:41 reads ONLY `opts.sep`. Writing `boxsep:N`
+% (as documented at README:515) sets `opts.boxsep` which is silently
+% ignored; the box falls back to the class `padding` default.
+%
+% This MWE renders three boxes:
+%   1) baseline -- only the class padding=2
+%   2) sep:10 -- documented at README:129; should give big padding
+%   3) boxsep:10 -- documented at README:515 and scholatex.tex:449;
+%       should give big padding -- bug: does not.
+%
+% Boxes 2 and 3 should look identical (large padding); box 1 has tight
+% padding. Actually box 1 == box 3, only box 2 reacts to sep:10.
+\documentclass[lang=en, padding=2]{scholatex}
+\begin{document}
+
+Baseline box (class padding=2mm):
+<box line:Navy fill:AliceBlue>{
+Lorem ipsum dolor sit amet.
+}
+
+With sep:10 (README:129 form):
+<box line:Navy fill:AliceBlue sep:10>{
+Lorem ipsum dolor sit amet.
+}
+
+With boxsep:10 (README:515 / manual form):
+<box line:Navy fill:AliceBlue boxsep:10>{
+Lorem ipsum dolor sit amet.
+}
+
+\end{document}

@@ -366,8 +366,8 @@ function M.mathlite(s)
         return "\\widehat{" .. M.mathlite(arg) .. "}"
 
       elseif word == "angle" then
-        error("scholatex: angle s'utilise avec des points : "
-            .. "angle(A) ou angle(ABC)")
+        error("scholatex: angle expects point names: "
+            .. "angle(A) or angle(ABC)")
 
       -- Triangle on three points: triangle(ABC) -> the symbol then the points.
       elseif word == "triangle" and s:sub(after, after) == "(" then

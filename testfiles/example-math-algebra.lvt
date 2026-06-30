@@ -1,0 +1,94 @@
+\input{regression-test}
+% !TeX program = lualatex
+% =====================================================================
+%  math-algebra.tex
+%  Linear algebra blocks: a matrix, a determinant and a square-bracket
+%  matrix, the augmentation bar of a linear system, and the system block
+%  that aligns on the first relation. One line is one row throughout.
+% =====================================================================
+\documentclass[
+  margins=18,
+  font=Latin Modern Roman,
+  size=12,
+  linespread=1.4,
+  lang=en
+]{scholatex}
+\begin{document}
+
+let title = <Red b 18pt c>
+let h1    = <Navy b section>
+let raw   = <Gray i>
+
+<title>scholatex — linear algebra
+
+% =====================================================================
+<h1>Matrix blocks
+% =====================================================================
+
+A matrix is a block: one line is one row, ; separates the entries.
+Every cell goes through the mini-language, so $2x + 1$ or $1/2$ work
+inside a cell.
+
+<matrix>{
+	1 ; 2 ; 3
+	4 ; 5 ; 6
+}
+
+<raw>The raw form needs a pmatrix environment, an ampersand between
+every entry and a double backslash at every row end.
+
+The same block under two other names draws a determinant or square
+brackets:
+
+<det>{
+	a ; b
+	c ; d
+}
+
+<bmatrix>{
+	2x + 1 ; 0
+	0 ; 1/2
+}
+
+% =====================================================================
+<h1>Augmented matrix
+% =====================================================================
+
+A single | inside a row draws the augmentation bar at that column on
+every row — how a linear system is set up for elimination:
+
+<bmatrix>{
+	2 ; 1 | 7
+	1 ; -1 | 1
+}
+
+The bar is allowed on <<matrix>> and <<bmatrix>>, never on
+<<det>>. A bar at a row edge, or misaligned across rows, raises a
+clear scholatex: error naming the line.
+
+% =====================================================================
+<nextpage h1>Systems of equations
+% =====================================================================
+
+A system aligns automatically on the first relational operator, so
+equalities and inequalities mix freely. One equation per line, no
+separator:
+
+<system>{
+	2x + 3y = 7
+	x - y = 1
+}
+
+<system>{
+	2x + 3 <= 7
+	x >= 0
+}
+
+A solution set then states itself in the language of sets — a pair in
+$RR^2$ subject to its constraints:
+
+<box line:Navy fill:AliceBlue radius:3 title:{The solution set}>{
+	$S = {{ (x, y) in RR^2 : 2x + 3y = 7 and x - y = 1 }}$
+}
+
+\end{document}
