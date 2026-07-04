@@ -63,7 +63,7 @@ return function(sl)
     while i <= n do
       local l = inner[i]
       if is_list_open(l) then
-        local bname, bwords = l:match("^%s*<(list):(%S*.-)>%s*{%s*$")
+        local bwords = l:match("^%s*<list:(%S*.-)>%s*{%s*$")
         local sub
         sub, i = U.collect_block(inner, i + 1)
         sl._blocks["list"](api, ":" .. bwords, sub)

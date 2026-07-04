@@ -2,6 +2,7 @@
 local U     = require("scholatex-util")
 local STYLE = require("scholatex-style")
 local MATH  = require("scholatex-math")
+local NUMEVAL = require("scholatex-numeval")
 
 local sl = {}
 sl.util   = U
@@ -11,6 +12,17 @@ sl._tags   = {}
 sl._blocks = {}
 
 local ALIAS, MACRO, BLOCKALIAS
+
+-- Warnings must land in the .log (and the terminal): editors such as
+-- TeXstudio show the log, not stderr. Outside LuaTeX (plain texlua tests),
+-- texio is absent and stderr is the fallback.
+local function warn(msg)
+  if texio and texio.write_nl then
+    texio.write_nl("term and log", msg)
+  else
+    io.stderr:write(msg .. "\n")
+  end
+end
 
 function sl.register_tag(name, fn)
   if sl._tags[name] then
@@ -47,10 +59,10 @@ local function warn_if_shadows(name, lineno)
   if sl._blocks[name] or sl._tags[name] then native = true end
   if native then
     local where = lineno and (" (line " .. lineno .. ")") or ""
-    io.stderr:write("scholatex: warning: 'let " .. name .. "'" .. where
+    warn("scholatex: warning: 'let " .. name .. "'" .. where
       .. " shadows a built-in name and will be ignored; "
       .. "the built-in '" .. name .. "' always takes precedence. "
-      .. "Use a different alias name.\n")
+      .. "Use a different alias name.")
   end
 end
 
@@ -76,7 +88,14 @@ local function lua_control(line)
     local items = U.split_commas(llist)
     local quoted = {}
     for _, it in ipairs(items) do
-      quoted[#quoted + 1] = string.format("%q", it)
+      -- A numeric item stays a NUMBER, so that  for k in [1, 2, 3]  then
+      -- if k > 2  compares numbers, exactly as the range form 1..3 does.
+      -- Anything else is a string literal.
+      if tonumber(it) then
+        quoted[#quoted + 1] = it
+      else
+        quoted[#quoted + 1] = string.format("%q", it)
+      end
     end
     return ("for _, %s in ipairs({%s}) do"):format(lv, table.concat(quoted, ", "))
   end
@@ -183,8 +202,8 @@ forward_text = function(code, s)
       local close = s:find("$", i + 1, true)
       if not close then
         local where = sl._line and (" (line " .. sl._line .. ")") or ""
-        io.stderr:write("scholatex: warning: unterminated '$'" .. where
-          .. "; treating it as a literal dollar sign.\n")
+        warn("scholatex: warning: unterminated '$'" .. where
+          .. "; treating it as a literal dollar sign.")
         buf[#buf + 1] = "\\$"; i = i + 1
         goto continue
       end
@@ -241,8 +260,8 @@ forward_text = function(code, s)
       local close = s:find(">", i + 1, true)
       if not close then
         local where = sl._line and (" (line " .. sl._line .. ")") or ""
-        io.stderr:write("scholatex: warning: unterminated '<'" .. where
-          .. "; treating it as a literal '<'. To print a literal '<', double it as <<.\n")
+        warn("scholatex: warning: unterminated '<'" .. where
+          .. "; treating it as a literal '<'. To print a literal '<', double it as <<.")
         buf[#buf + 1] = "\\textless{}"; i = i + 1
         goto continue
       end
@@ -382,7 +401,22 @@ process_lines = function(code, body_lines)
   while idx <= total do
     local entry = body_lines[idx]
     if entry.lineno then sl._line = entry.lineno end
-    if entry.var then
+    if entry.fninner then
+      local attrs = sl.fn_parse(entry.fninner)
+      local key = entry.fnreg
+      if not key or key == false then
+        key = attrs.name and attrs.name:match("^([%a_][%w_]*)")
+        if not key then
+          error("scholatex: line " .. (entry.lineno or "?")
+              .. ": a standalone <fn> registers itself and so needs the "
+              .. "equation form  <fn f(x) = ...>  (or bind it with let)", 0)
+        end
+        warn_if_shadows(key, entry.lineno or 0)
+      end
+      sl._objects = sl._objects or {}
+      sl._objects[key] = attrs
+      idx = idx + 1
+    elseif entry.var then
       code[#code + 1] = "local " .. entry.var .. " = " .. entry.expr .. "\n"
       idx = idx + 1
     else
@@ -448,23 +482,44 @@ end
 
 local function build_lua(src)
   local lang = (sl.config and sl.config.lang) or "fr"
+  local prec = (sl.config and sl.config.precision) or -1
   local sep_txt  = (lang == "en") and "." or ","
   local sep_math = (lang == "en") and "." or "{,}"
   local function q(s) return string.format("%q", s) end
   local code = {
     "local _parts = {}\n",
     "local function emit(s) _parts[#_parts+1] = s end\n",
-    "local sqrt=math.sqrt; local floor=math.floor; local ceil=math.ceil\n",
-    "local abs=math.abs; local pi=math.pi; local max=math.max; local min=math.min\n",
-    "local function round(x,d) local m=10^(d or 0); return floor(x*m+0.5)/m end\n",
+    NUMEVAL.PREAMBLE,
+    NUMEVAL.inject_locals(),
+    "local abs=math.abs; local max=math.max; local min=math.min\n",
     "local _SEPT=" .. q(sep_txt) .. "; local _SEPM=" .. q(sep_math) .. "\n",
-    "local function _fmt(v) if type(v)=='number' then return (tostring(v):gsub('%.',_SEPT,1)) end if v==nil then return '' end return tostring(v) end\n",
-    "local function _fmtm(v) if type(v)=='number' then return (tostring(v):gsub('%.',_SEPM,1)) end if v==nil then return '' end return tostring(v) end\n",
+    "local _PREC=" .. tostring(prec) .. "\n",
+    -- Display a computed number: round to _PREC decimals when _PREC >= 0
+    -- (trailing zeros then dropped, so 3.50 -> 3.5, 4.0 -> 4), otherwise
+    -- print it as Lua would. Non-numbers pass through untouched. _fmt is
+    -- for text mode (decimal sep _SEPT), _fmtm for maths mode (_SEPM).
+    "local function _show(v, sep)\n"
+    -- A locally round()-ed value carries its own decimal count and overrides
+    -- the document `precision`; a bare number obeys `precision`.
+    .. "  local fixed\n"
+    .. "  if type(v)=='table' and v.v~=nil and v.d~=nil then fixed=v.d; v=v.v end\n"
+    .. "  if type(v)~='number' then if v==nil then return '' end return tostring(v) end\n"
+    .. "  local s\n"
+    .. "  local p = fixed or _PREC\n"
+    .. "  if p and p >= 0 then\n"
+    .. "    s = string.format('%.'..p..'f', v)\n"
+    .. "    if s:find('%.') then s = s:gsub('0+$',''):gsub('%.$','') end\n"
+    .. "  else s = tostring(v) end\n"
+    .. "  return (s:gsub('%.', sep, 1))\n"
+    .. "end\n",
+    "local function _fmt(v) return _show(v, _SEPT) end\n",
+    "local function _fmtm(v) return _show(v, _SEPM) end\n",
   }
 
   local body_lines = {}
   local lineno = 0
   local pending_obj = nil   -- {name=, buf=, startline=} pendant l'accumulation
+  local pending_let = nil   -- {name=, buf=, depth=, startline=} table Lua ouverte
                             -- d'un  let X = <fn ... >  multi-lignes
   for srcline in (src .. "\n"):gmatch("(.-)\n") do
     lineno = lineno + 1
@@ -480,11 +535,40 @@ local function build_lua(src)
           error("scholatex: line " .. pending_obj.startline
               .. ": malformed <fn ...> object", 0)
         end
-        sl._objects = sl._objects or {}
-        sl._objects[pending_obj.name] = sl.fn_parse(inner)
+        -- l'enregistrement est DIFFERE en passe 2 : les objets se lient
+        -- dans l'ordre du document, une redefinition ne masque que la
+        -- suite (shadowing sequentiel), jamais les usages precedents.
+        body_lines[#body_lines + 1] = {fnreg = pending_obj.name,
+          fninner = inner, lineno = pending_obj.startline}
         pending_obj = nil
       end
       goto continue
+    end
+
+    -- Accumulation d'un  let NOM = { ...  multi-lignes (table Lua ouverte,
+    -- p. ex. un dictionnaire de donnees pour <stats>). Les lignes sont
+    -- jointes en une seule expression quand les accolades s'equilibrent.
+    if pending_let then
+      pending_let.buf[#pending_let.buf + 1] = line
+      pending_let.depth = pending_let.depth + U.raw_brace_delta(line)
+      if pending_let.depth <= 0 then
+        body_lines[#body_lines + 1] = {var = pending_let.name,
+          expr = table.concat(pending_let.buf, " "),
+          lineno = pending_let.startline}
+        pending_let = nil
+      end
+      goto continue
+    end
+    do
+      local vn, vexpr = line:match("^%s*let%s+([%a_][%w_]*)%s*=%s*({.*)$")
+      if vn then
+        local d = U.raw_brace_delta(vexpr)
+        if d > 0 then
+          warn_if_shadows(vn, lineno)
+          pending_let = {name = vn, buf = {vexpr}, depth = d, startline = lineno}
+          goto continue
+        end
+      end
     end
 
     -- Detection d'un  let NOM = <fn ...  (eventuellement multi-lignes).
@@ -495,10 +579,29 @@ local function build_lua(src)
         if orest:match(">%s*$") then
           -- objet complet sur une seule ligne
           local inner = orest:gsub(">%s*$", "")
-          sl._objects = sl._objects or {}
-          sl._objects[oname] = sl.fn_parse(inner)
+          body_lines[#body_lines + 1] = {fnreg = oname, fninner = inner,
+                                         lineno = lineno}
         else
           pending_obj = {name = oname, buf = { "<fn " .. orest },
+                         startline = lineno}
+        end
+        goto continue
+      end
+    end
+
+    -- Detection d'un  <fn f(x) = ...>  autonome : l'objet s'enregistre
+    -- lui-meme sous le nom du membre de gauche, comme  vector s = u+v
+    -- s'auto-nomme dans un bloc draw. La phrase du document se lit alors
+    -- comme l'enonce : « Soit f(x) = ... ».
+    do
+      local orest = line:match("^%s*<%s*fn%f[%s>](.*)$")
+      if orest then
+        if orest:match(">%s*$") then
+          local inner = orest:gsub(">%s*$", "")
+          body_lines[#body_lines + 1] = {fnreg = false, fninner = inner,
+                                         lineno = lineno}
+        else
+          pending_obj = {name = nil, buf = { "<fn " .. orest },
                          startline = lineno}
         end
         goto continue
@@ -663,22 +766,39 @@ local function make_sandbox_env()
     return c
   end
   env.__drawbuild = sl.build_figure_block
+  env.__statsbuild = sl.build_stats_runtime
   return env, safestr
 end
 
 local SANDBOX_MAX_STEPS = 2e7
+local SANDBOX_MAX_KB    = 256 * 1024   -- memory growth cap: 256 MB
 local function run_limited(chunk, safestr)
   local prevmt = debug.getmetatable("")
   debug.setmetatable("", { __index = safestr })
   local co = coroutine.create(chunk)
   local steps = 0
-  debug.sethook(co, function()
-    steps = steps + 1
-    if steps > SANDBOX_MAX_STEPS / 1e5 then
-      error("scholatex: untrusted document exceeded the instruction limit "
-          .. "(possible runaway loop); aborted", 0)
+  local mem0 = collectgarbage("count")
+  -- The instruction count does not bound allocation: a handful of doubling
+  -- concatenations builds gigabytes in a few dozen instructions, before a
+  -- pure count hook ever fires. The hook therefore also fires on every
+  -- transpiled LINE ("l"), and the memory cap is checked each time, so the
+  -- run aborts cleanly before the whole TeX process is starved.
+  debug.sethook(co, function(event)
+    if event == "count" then
+      steps = steps + 1
+      if steps > SANDBOX_MAX_STEPS / 1e5 then
+        error("scholatex: untrusted document exceeded the instruction limit "
+            .. "(possible runaway loop); aborted", 0)
+      end
     end
-  end, "", 1e5)
+    if collectgarbage("count") - mem0 > SANDBOX_MAX_KB then
+      collectgarbage()
+      if collectgarbage("count") - mem0 > SANDBOX_MAX_KB then
+        error("scholatex: untrusted document exceeded the memory limit ("
+            .. math.floor(SANDBOX_MAX_KB / 1024) .. " MB); aborted", 0)
+      end
+    end
+  end, "l", 1e5)
   local ok, res = coroutine.resume(co)
   debug.sethook(co)
   debug.setmetatable("", prevmt)
@@ -688,9 +808,14 @@ end
 
 function sl.transpile(src)
   ALIAS, MACRO, BLOCKALIAS = {}, {}, {}
+  sl._objects = {}
   sl._line = nil
+  -- Windows editors save CRLF; a stray \r at end of line would defeat the
+  -- $-anchored line patterns and leak into the emitted TeX.
+  src = src:gsub("\r\n?", "\n")
   local lang = (sl.config and sl.config.lang) or "fr"
   MATH.decsep = (lang == "en") and "." or "{,}"
+  NUMEVAL.set_precision((sl.config and sl.config.precision) or -1)
   local okb, lua_code = pcall(build_lua, src)
   if not okb then
     local msg = tostring(lua_code):gsub("^.-:%d+: ", "")
@@ -716,6 +841,7 @@ function sl.transpile(src)
       return c
     end
     _G.__drawbuild = sl.build_figure_block
+    _G.__statsbuild = sl.build_stats_runtime
     chunk, err = load(lua_code, "=sl-body")
   end
   if not chunk then
@@ -784,6 +910,10 @@ sl.use("scholatex-grid")
 sl.use("scholatex-list")
 sl.use("scholatex-matrix")
 sl.use("scholatex-vartab")
+sl.use("scholatex-signtab")
+sl.use("scholatex-numberline")
+sl.use("scholatex-tree")
+sl.use("scholatex-stats")
 sl.use("scholatex-plot")
 sl.use("scholatex-figure")
 sl.use("scholatex-toc")

@@ -402,8 +402,56 @@ end
 return function(sl)
   -- Parseur d'objet, appele par le moteur sur  let X = <fn ...>.
   -- Renvoie la table d'attributs bruts, stockee dans sl._objects[X].
+  -- Deux formes :
+  --   attributs purs :   name:{f(x)} expr:{...} x:{...} ...
+  --   forme equation :   f(x) = (x+2)(x-3)  [attributs ensuite]
+  -- L'equation se lit comme au tableau ; elle fournit name: et expr: et
+  -- declare la variable en situation. Les attributs de tableau (x:,
+  -- deriv:, var:, second:) restent des attributs apres l'expression.
   sl.fn_parse = function(inner)
-    return parse_attrs(U.trim(inner or ""))
+    inner = U.trim(inner or "")
+    local fname, fvar, tail =
+      inner:match("^([%a_][%w_]*)%s*%(%s*([%a_][%w_]*)%s*%)%s*(.*)$")
+    if not fname then
+      return parse_attrs(inner)
+    end
+    -- en-tete sans '=' : objet purement tabulaire (un tableau sans
+    -- formule) ; le nom et la variable suffisent, les attributs suivent.
+    if not tail:match("^=") then
+      if tail ~= "" and not tail:match("^[%a_][%w_]*:") then
+        error("scholatex: <fn " .. fname .. "(" .. fvar .. ") ...> expects "
+            .. "either  = expression  or table attributes (x:, deriv:, var:)")
+      end
+      local attrs = parse_attrs(U.trim(tail))
+      if attrs.name or attrs.expr then
+        error("scholatex: <fn> takes either the head form  " .. fname .. "("
+            .. fvar .. ")  or name:/expr: attributes, not both")
+      end
+      attrs.name = fname .. "(" .. fvar .. ")"
+      return attrs
+    end
+    local tail2 = U.trim(tail:sub(2))
+    -- l'expression court jusqu'au premier attribut `mot:` (aucune
+    -- expression du mini-langage ne contient de ':')
+    local p = tail2:find("%f[%S][%a_][%w_]*:")
+    local expr, attrstr
+    if p then
+      expr, attrstr = U.trim(tail2:sub(1, p - 1)), tail2:sub(p)
+    else
+      expr, attrstr = tail2, ""
+    end
+    if expr == "" then
+      error("scholatex: <fn " .. fname .. "(" .. fvar .. ") = ...> has an "
+          .. "empty right-hand side")
+    end
+    local attrs = parse_attrs(U.trim(attrstr))
+    if attrs.name or attrs.expr then
+      error("scholatex: <fn> takes either the equation form  " .. fname .. "("
+          .. fvar .. ") = ...  or name:/expr: attributes, not both")
+    end
+    attrs.name = fname .. "(" .. fvar .. ")"
+    attrs.expr = expr
+    return attrs
   end
 
   sl.register_tag("vartab", function(api, words, content)

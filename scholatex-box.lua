@@ -38,7 +38,11 @@ local function build_tcb_options(sl, opts)
 
   o[#o+1] = "boxrule=" .. (opts.boxrule or DEFAULT.boxrule) .. "mm"
 
+  -- sep: is the canonical name (README class-option table); boxsep: was
+  -- documented in the <box> paragraph up to v2.5 and stays as a synonym
+  -- so published documents keep compiling (issue #1).
   local pad = opts.sep
+            or opts.boxsep
             or (sl.config and sl.config.padding)
             or DEFAULT.sep
   o[#o+1] = "boxsep=" .. pad .. "mm"

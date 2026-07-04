@@ -19,6 +19,8 @@
 
 let title = <Red b 18pt c>
 let h1    = <Navy b section>
+let topic = <Navy b section ROMAN>
+let p     = <tab>
 
 <title>scholatex — geometry
 
@@ -259,6 +261,85 @@ sun:
 	for k in 0..11 {
 		line({1.2*math.cos(k*math.pi/6), 1.2*math.sin(k*math.pi/6)}, {2.4*math.cos(k*math.pi/6), 2.4*math.sin(k*math.pi/6)})
 	}
+}
+
+% =====================================================================
+%  Analytic mode: a graduated frame, coordinates given not computed.
+% =====================================================================
+
+With axes:{xmin,xmax,ymin,ymax} the same block draws a cartesian frame and
+reads each line as a coordinate directive. Points are placed at their
+coordinates, lines come from equations:
+
+<draw axes:{-5,5,-5,5}>{
+	point A (2,3)
+	point B (-1,1)
+	line y = 2x-1
+	line through A B
+}
+
+Stored vectors combine, and both rules read on one frame. The parallelogram
+rule for the sum: each vector is copied dashed to the other's tip, and the
+diagonal u+v closes the parallelogram, its expression written along the
+arrow. The triangle rule for the difference on the same figure: u-v runs
+from the tip of v to the tip of u — the other diagonal.
+
+<draw axes:{-5,5,-5,5}>{
+	vector u (3,1)
+	vector v (1,3)
+	vector v from:~u style:dashed-gray
+	vector u from:~v style:dashed-gray
+	vector s = u+v style:Blue
+	vector d = u-v from:~v style:Red
+}
+
+A named circle carries a tangent at a point on it:
+
+<draw axes:{-5,5,-5,5}>{
+	point T (0,3)
+	circle C center:(0,0) radius:3
+	tangent to:C at:T
+}
+
+A region shades the half-plane of a linear inequality, the boundary dashed:
+
+<draw axes:{-5,5,-5,5}>{
+	region y > x+1
+}
+
+% ---------------------------------------------------------------------
+<topic>The trigonometric circle
+
+<p>{ The sixteen remarkable angles in principal measure; values:on adds
+the cosine and sine projections of the first quadrant. scale: shrinks or
+enlarges any drawing without touching its text (default 1) — here the
+circle no longer spans the full page width: }
+
+<draw scale:0.85>trigcircle radius:3.4 values:on
+
+<p>{ Dynamic: a step and a window. Exact values at the remarkable angles,
+two decimals elsewhere: }
+
+<draw>trigcircle radius:3.2 step:{pi/6}
+
+<draw>trigcircle radius:3.2 range:{0, pi/2} step:{pi/12} values:on
+
+% ---------------------------------------------------------------------
+<topic>Space geometry
+
+<p>{ The six solids in cabinet projection. Hidden edges are computed from
+the orientation of each face, never declared: }
+
+<draw>{
+	solid cube ABCDEFGH edge:3
+	solid pyramid SABCD base:3 height:3.6
+}
+
+<draw>{
+	solid cuboid sides:{3.5, 2, 1.5}
+	solid cylinder radius:1.2 height:3
+	solid cone radius:1.4 height:3.2
+	solid sphere radius:1.6
 }
 
 \end{document}

@@ -1,5 +1,5 @@
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{scholatex}[2026-06-28 v2.3 A tag-based language for print-ready teaching worksheets]
+\ProvidesClass{scholatex}[2026-07-03 v2.5 A tag-based language for print-ready teaching worksheets]
 % scholatex --- a lightweight tag-based markup language for LuaLaTeX
 % Copyright (C) 2026 DUBARD Gérard
 %
@@ -22,6 +22,9 @@
 \DeclareStringOption[100]{scriptscale}
 \DeclareStringOption[2]{padding}
 \DeclareStringOption[fr]{lang}
+% precision: default number of decimals a computed #{...} value is rounded
+% to for display. -1 means "no rounding" (print the number as computed).
+\DeclareStringOption[-1]{precision}
 \DeclareBoolOption[false]{untrusted}
 \DeclareDefaultOption{\PassOptionsToClass{\CurrentOption}{extarticle}}
 \ProcessKeyvalOptions*
@@ -60,6 +63,7 @@
 \RequirePackage{tkz-tab}
 \RequirePackage{pgfplots}
 \pgfplotsset{compat=1.18}
+\usepgfplotslibrary{fillbetween}
 \setlength{\JustifyingParindent}{0pt}
 \newlength{\scholatextab}
 \setlength{\scholatextab}{\scholatex@tabwidth mm}
@@ -84,7 +88,7 @@
 \geometry{margin=\scholatex@margins mm}%
 \fi
 \directlua{scholatex = require("scholatex")}
-\directlua{scholatex.config = scholatex.config or {}; scholatex.config.padding = "\scholatex@padding"; scholatex.config.lang = "\scholatex@lang"}
+\directlua{scholatex.config = scholatex.config or {}; scholatex.config.padding = "\scholatex@padding"; scholatex.config.lang = "\scholatex@lang"; scholatex.config.precision = tonumber("\scholatex@precision")}
 \ifscholatex@untrusted
   \directlua{scholatex.config.untrusted = true}
 \else
@@ -134,13 +138,36 @@
 \setlength{\lineskip}{3pt}
 \AtBeginDocument{%
 	\directlua{
-	local f = io.open(tex.jobname .. ".tex", "r")
+	% At this point the file LuaTeX is reading IS the main document, so
+	% status.filename names it exactly -- robust against -jobname=..., a
+	% .ltx extension, or spaces. jobname .. ".tex" stays as the fallback.
+	local path = status and status.filename
+	local f = path and io.open(path, "r")
+	if not f then
+	path = tex.jobname .. ".tex"
+	f = io.open(path, "r")
+	end
+	if not f then
+	tex.error("scholatex.cls: cannot reopen the source file to read the body"
+	.. " (tried '" .. tostring(path) .. "'). If you used -jobname, the"
+	.. " class still needs to find the actual .tex source")
+	else
 	local whole = f:read("*a"); f:close()
-	local body = whole:match("\string\\begin{document}(.-)\string\\end{document}")
+	local body, tail = whole:match("\string\\begin{document}(.-)\string\\end{document}(.*)$")
 	if not body then
 	tex.error("scholatex.cls: begin/end document not found")
 	else
+	% The match is non-greedy: a literal \end{document} mentioned in the
+	% body (a document ABOUT LaTeX) would silently truncate everything
+	% after it. Detect the leftover and say so instead of staying quiet.
+	if tail and tail:find("\string\\end{document}", 1, true) then
+	texio.write_nl("term and log", "scholatex: warning: another"
+	.. " \string\\end{document} appears after the first one; the body was"
+	.. " cut at the FIRST occurrence. If you meant to mention the token"
+	.. " in prose, break it up (e.g. \string\\end{doc*ument}).")
+	end
 	scholatex.inject(body)
+	end
 	end
 }%
 \end{document}%

@@ -15,12 +15,17 @@
   font=Latin Modern Roman,
   size=12,
   linespread=1.4,
-  lang=en
+  lang=en,
+  precision=4
 ]{scholatex}
 \begin{document}
 
 let title = <Red b 18pt c>
 let h1    = <Navy b section>
+let topic = <Navy b section ROMAN>
+let study = <Navy b section ROMAN>
+let step  = <Navy b subsection roman >
+let p     = <tab>
 
 <title>scholatex — analysis
 
@@ -204,6 +209,320 @@ $ilaplace(f)$ and $ifourier(f)$.
 
 <box line:Indigo fill:Lavender radius:3 title:{A transform pair}>{
 	$laplace(f)$ on one side, $ilaplace(laplace(f)) = f$ on the other.
+}
+
+% ---------------------------------------------------------------------
+<topic>Sign tables
+
+<p>{ Computed from the function object: rows, zeros and signs are derived
+from the factored expression, zeros exact. }
+
+<fn f(x) = (x+2)(x-3)>
+<signtab f>
+
+<p>{ A quotient: the pole comes out as a forbidden value; an even
+multiplicity is known not to change sign. Objects rebind sequentially ---
+the f, g and h of later sections shadow these without touching them. }
+
+<fn g(x) = (x+1)/(x-2)>
+<signtab g>
+
+<fn h(x) = -2(x+1)^2 (x - 1/2)>
+<signtab h>
+
+<p>{ The block form remains the general one, for rows the affine engine
+cannot derive: }
+
+<signtab x:{0 | pi/2 | pi}>{
+	cos(x) : + | 0 | -
+}
+
+% ---------------------------------------------------------------------
+<topic>The number line
+
+<p>{ Solved: the block takes the inequality and computes the set, endpoints
+exact, open or closed as the inequality is strict or not: }
+
+<numberline x:{-5, 5}>{
+	abs(x - 1/2) >= 5/2
+}
+
+<numberline x:{-5, 5}>{
+	(x+1)/(x-3) >= 0
+}
+
+<p>{ Declared, when the set is given rather than solved: }
+
+<numberline x:{-5, 5} set:{[-2, 3) union (4, inf)} points:{-4}>
+
+% ---------------------------------------------------------------------
+<topic>Areas and integrals
+
+<fn f(x) = -x^2/4 + 3>
+<fn g(x) = x/2>
+
+<p>{ The area under the curve of $f$ between 1 and 3: }
+
+<plot f x:{-1, 4} y:{-1, 4} area:{1, 3}>
+
+<p>{ The area between the curves of $f$ and $g$ on $[0, 3]$: }
+
+<plot f x:{-1, 4} y:{-1, 4} between:g area:{0, 3}>
+
+% ---------------------------------------------------------------------
+<topic>Recurrent sequences: the cobweb
+
+<fn h(x) = sqrt(2x+3)>
+
+<p>{ The staircase of $u_(n+1) = h(u_n)$ from $u_0 = 0.2$, converging to
+the fixed point $l = 3$: }
+
+<plot h x:{0, 4} y:{0, 4} cobweb:{0.2, 10}>
+
+
+% =====================================================================
+%  Function studies --- the eight-step method (Müller), three rational
+%  studies and one hyperbolic, each ending on the plotted graph.
+% =====================================================================
+% ====================================================================
+<line>
+<study title:{Polynomial: $f(x) = -x^4 + 2x^2 + 1$}>{
+<p>An even quartic.
+}
+
+<fn f(x) = -x^4 + 2x^2 + 1
+            x:{-inf | -1 | -1/sqrt(3) | 0 | 1/sqrt(3) | 1 | +inf}
+            second:{- | - | + | + | - | -}
+            deriv:{+ | + | + | - | - | -}
+            var:{-inf / 2 \ 1 / 2 \ -inf}>
+
+<step title:{Domain}>{
+<p>$f$ is a polynomial: its domain is all of $R$.
+}
+
+<step title:{Parity}>{
+<p>$f(-x) = -x^4 + 2x^2 + 1 = f(x)$, so $f$ is even; the graph is
+symmetric about the $y$-axis.
+}
+
+<step title:{Sign}>{
+<p>$f(0) = 1 > 0$ and $f$ tends to $-inf$ at both ends, so $f$ vanishes
+at two symmetric points and is positive between them, negative outside.
+}
+
+<step title:{Vertical asymptotes}>{
+<p>None: $f$ is defined and continuous on all of $R$.
+}
+
+<step title:{Affine asymptotes}>{
+<p>None: a quartic grows faster than any line, the ratio of $f(x)$ to $x$ tends to $+- inf$. There is no affine asymptote.
+}
+
+<step title:{Growth and critical points}>{
+<p>$f'(x) = -4x^3 + 4x = 4x(1 - x^2)$ vanishes at $-1$, $0$, $1$: two
+maxima $f(-1) = f(1) = 2$ and a local minimum $f(0) = 1$.
+}
+
+<step title:{Convexity and inflection points}>{
+<p>$f''(x) = -12x^2 + 4 = 4(1 - 3x^2)$ vanishes at $+- 1/sqrt(3)$:
+$f$ is convex between them and concave outside, with two inflection
+points. The table gathers $f''$, $f'$ and $f$.
+}
+
+<vartab f>
+
+<step title:{Graph}>{
+<plot f samples:200 x:{-2, 2} y:{-3, 3}>
+}
+
+% ====================================================================
+<study title:{Rational, horizontal asymptote: $g(x) = x^2/(x^2-2x+2)$}>{
+<p>Denominator without real root.
+}
+
+<fn g(x) = x^2/(x^2 - 2x + 2)
+            x:{-inf | 0 | 2 | +inf}
+            deriv:{- | + | -}
+            var:{1 \ 0 / 2 \ 1}>
+
+<step title:{Domain}>{
+<p>The discriminant of $x^2 - 2x + 2$ is $-4 < 0$, so the denominator
+never vanishes: $g$ is defined on $R$.
+}
+
+<step title:{Parity}>{
+<p>$g(-x) != g(x)$ and $g(-x) != -g(x)$: $g$ is neither even nor
+odd.
+}
+
+<step title:{Sign}>{
+<p>$g(x) = x^2 / (x^2 - 2x + 2)$ is a ratio of a square by a positive
+quantity, so $g(x) >= 0$, vanishing only at $x = 0$.
+}
+
+<step title:{Vertical asymptotes}>{
+<p>None: the denominator never vanishes.
+}
+
+<step title:{Horizontal asymptote}>{
+<p>$g(x)$ tends to $1$ as $x$ tends to $+- inf$, so the line $y = 1$
+is a horizontal asymptote on both sides.
+}
+
+<step title:{Growth and critical points}>{
+<p>$g'(x) = 2x(2-x)/(x^2-2x+2)^2$ vanishes at $0$ and $2$: a minimum
+$g(0) = 0$ and a maximum $g(2) = 2$.
+}
+
+<step title:{Convexity and inflection points}>{
+<p>$g''$ vanishes at $1-sqrt(3)$, $1$ and $1+sqrt(3)$, giving three
+inflection points. Its sign takes a table of its own; the variation
+table below then carries only $g'$ and $g$.
+}
+
+<signtab x:{-inf | 1-sqrt(3) | 1 | 1+sqrt(3) | +inf}>{
+	g''(x) : - | 0 | + | 0 | - | 0 | +
+}
+
+<vartab g>
+
+<step title:{Graph}>{
+<plot g samples:200 x:{-6, 6} y:{-1, 3}>
+}
+
+% ====================================================================
+<study title:{Rational, vertical asymptote: $k(x) = (x^2+1)/(x-1)$}>{
+<p>A pole at $x = 1$ and an affine asymptote.
+}
+
+<fn k(x) = (x^2+1)/(x-1)
+            x:{-inf | 1-sqrt(2) | 1 | 1+sqrt(2) | +inf}
+            second:{- | - || + | +}
+            deriv:{+ | - || - | +}
+            var:{-inf / 2-2sqrt(2) \ -inf || +inf \ 2+2sqrt(2) / +inf}>
+
+<step title:{Domain}>{
+<p>The denominator $x - 1$ vanishes at $x = 1$: the domain is
+$]-inf, 1[$ union $]1, +inf[$.
+}
+
+<step title:{Parity}>{
+<p>The domain is not centred at $0$, so $k$ is neither even nor odd.
+}
+
+<step title:{Sign}>{
+<p>$x^2 + 1 > 0$ always, so $k(x)$ has the sign of $x - 1$: negative on
+$]-inf, 1[$, positive on $]1, +inf[$.
+}
+
+<step title:{Vertical asymptote}>{
+<p>At $x = 1$, $k(x)$ tends to $-inf$ on the left and $+inf$ on the
+right: the line $x = 1$ is a vertical asymptote.
+}
+
+<step title:{Affine asymptote}>{
+<p>Dividing gives $k(x) = x + 1 + 2/(x-1)$, so $k(x) - (x+1)$ tends to
+$0$: the line $y = x + 1$ is an affine asymptote.
+}
+
+<step title:{Growth and critical points}>{
+<p>$k'(x) = (x^2-2x-1)/(x-1)^2$ vanishes at $1 +- sqrt(2)$: a maximum
+$k(1-sqrt(2)) = 2 - 2sqrt(2)$ and a minimum $k(1+sqrt(2)) = 2 + 2sqrt(2)$.
+}
+
+<step title:{Convexity}>{
+<p>$k''(x) = 4/(x-1)^3$ never vanishes but changes sign at the pole:
+$k$ is concave on $]-inf, 1[$ and convex on $]1, +inf[$, with no
+inflection point. The table gathers $k''$, $k'$ and $k$.
+}
+
+<vartab k>
+
+<step title:{Graph}>{
+<plot k samples:200 x:{-4, 6} y:{-10, 12}>
+}
+
+% =====================================================================
+%  Parametric and polar curves: <plot> with kind:.
+% =====================================================================
+
+<step title:{Parametric and polar curves}>{
+<p>A curve that is not a function graph is the same plot with kind:. An
+ellipse is parametric, a cardioid is polar; bounds may use pi.
+
+let ell = <fn expr:{3cos(t), 2sin(t)}>
+<plot ell kind:parametric t:{0, 2pi} x:{-4, 4} y:{-3, 3}>
+
+let cardio = <fn expr:{1+cos(theta)}>
+<plot cardio kind:polar theta:{0, 2pi}>
+}
+
+% =====================================================================
+%  Transcendental functions and computed values: the shared numeric
+%  library backs both #{...} and <plot>, and precision: rounds the
+%  interpolated results for display.
+% =====================================================================
+<line>
+<study title:{Hyperbolic: $f(x) = cosh(x)$, the catenary}>{
+<p>The same eight-step method applies beyond rational functions. The
+hyperbolic cosine $cosh(x) = (exp(x) + exp(-x))/2$ is the curve of a
+hanging chain; the shared numeric library both draws it and computes its
+values, and precision:4 on the class rounds every interpolated number.
+}
+
+<fn f(x) = cosh(x)
+            x:{-inf | 0 | +inf}
+            deriv:{- | +}
+            var:{+inf \ 1 / +inf}>
+
+<step title:{Domain}>{
+<p>$exp$ is defined on all of $R$, hence so is $cosh$: the domain is
+$R$, with no forbidden value.
+}
+
+<step title:{Parity}>{
+<p>$f(-x) = (exp(-x) + exp(x))/2 = f(x)$: $cosh$ is even, the graph is
+symmetric about the $y$-axis, and the study may be led on $[0, +inf[$.
+}
+
+<step title:{Sign}>{
+<p>Both $exp(x) > 0$ and $exp(-x) > 0$, so $cosh(x) >= 1 > 0$ everywhere:
+the curve stays above the $x$-axis, and even above the line $y = 1$.
+}
+
+<step title:{Asymptotic behaviour}>{
+<p>As $x -> +inf$, $exp(-x) -> 0$, so $cosh(x) ~ exp(x)/2$: growth is
+exponential and there is no asymptote. By parity the same holds as
+$x -> -inf$ with $exp(-x)/2$.
+}
+
+<step title:{Growth and critical points}>{
+<p>$f'(x) = sinh(x)$, which vanishes only at $0$ and has the sign of $x$:
+$f$ decreases on $]-inf, 0]$, increases on $[0, +inf[$, with the global
+minimum $f(0) = #{cosh(0)}$.
+}
+
+<step title:{Convexity}>{
+<p>$f''(x) = cosh(x) >= 1 > 0$: $f$ is its own second derivative, convex
+on all of $R$, with no inflection point.
+}
+
+<step title:{Variation table}>{
+<vartab f>
+}
+
+<step title:{Graph}>{
+<plot f x:{-2.5, 2.5} y:{0, 6}>
+}
+
+<step title:{A few values, rounded to four decimals}>{
+<p>The same library that draws the curve computes its values. With
+precision:4 set on the class, each interpolation is rounded for display:
+$cosh(0) = #{cosh(0)}$, $cosh(1) = #{cosh(1)}$, and the identity
+$cosh^2(1) - sinh^2(1) = #{cosh(1)^2 - sinh(1)^2}$ comes back to $1$.
+The natural logarithm undoes the exponential: $ln(e) = #{ln(e)}$, while
+$log(1000) = #{log(1000)}$ in base ten. A local override keeps more
+figures where wanted: $pi approx #{round(pi, 8)}$.
 }
 
 \end{document}

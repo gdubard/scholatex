@@ -1,7 +1,7 @@
 % !TeX program = lualatex
 % =====================================================================
-%  probability.tex
-%  Probability and statistics vocabulary: counting (binomial coefficient
+%  statistics-probability.tex
+%  Probability and statistics, vocabulary and figures: counting (binomial
 %  C(n,k), arrangement A(n,k), factorial), the blackboard operators for
 %  probability PP and expectation EE, variance/covariance, the common
 %  distributions, and the distribution/density functions. The blackboard
@@ -18,6 +18,8 @@
 \begin{document}
 
 let title = <Red b 18pt c>
+let topic = <Navy b section ROMAN>
+let p     = <tab>
 let h1    = <Navy b section>
 let note  = <Gray i>
 
@@ -94,5 +96,76 @@ $densite(X, x)$ — the variable in subscript, the point in the argument.
 $repart(X, x) = PP(X <= x)$
 
 For a continuous law, $repart(X, x) = int(t=-inf,x) densite(X, t)$.
+
+% ---------------------------------------------------------------------
+<topic>Weighted probability trees
+
+<p>{ Two events; a node with a single branch receives its complement
+automatically (!B, with the complementary probability), the product of each path printed
+at the leaf: }
+
+<tree products:on>{
+	A 0.3 {
+		B 0.6
+	}
+	!A 0.7 {
+		B 0.1
+	}
+}
+
+% ---------------------------------------------------------------------
+<topic>Probability laws
+
+<p>{ The standard normal law, $P(-1 <= X <= 1.5)$ shaded: }
+
+<plot normal:{0, 1} area:{-1, 1.5}>
+
+<p>{ The binomial law $binomial(12, 0.4)$, the bars of
+$P(3 <= X <= 6)$ highlighted: }
+
+<plot binomial:{12, 0.4} area:{3, 6}>
+
+% ---------------------------------------------------------------------
+<topic>Descriptive statistics
+
+<p>{ The bar chart of a discrete series, a dictionary of frequencies: }
+
+<stats kind:bars data:{1: 4 | 2: 7 | 3: 2 | 4: 5}>
+
+<p>{ Data as a Lua table declared with let, passed by name --- one source,
+several figures. Map keys come out sorted; a list of pairs keeps its
+writing order: }
+
+let notes = {
+	Mathematiques = 15.5,
+	Francais = 12.0,
+	Histoire = 14.0,
+	Physique = 16.5,
+	Anglais = 18.0
+}
+
+<stats kind:bars data:notes>
+<stats kind:pie data:notes>
+
+<p>{ The same tag with categories: }
+
+<stats kind:bars data:{Walk: 5 | Bus: 3 | Bike: 2}>
+
+<p>{ The histogram of a grouped series --- unequal classes, so the height
+is the density (count over width), not the count: }
+
+<stats kind:histogram bounds:{0, 5, 10, 20} counts:{3, 7, 2}>
+
+<p>{ The pie chart, twelve o'clock start, clockwise: }
+
+<stats kind:pie data:{Walk: 5 | Bus: 3 | Bike: 2}>
+
+<p>{ The box plot, French secondary-school quartiles: }
+
+<stats kind:boxplot data:{12, 15, 9, 21, 14, 15, 18, 11, 16}>
+
+<p>{ The scatter plot with its least-squares line: }
+
+<stats kind:scatter data:{(1, 2.1) (2, 2.6) (3, 3.4) (4, 3.9) (5, 4.2) (6, 5.1)} fit:on>
 
 \end{document}

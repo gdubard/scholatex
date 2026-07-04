@@ -92,7 +92,7 @@ function U.collect_block(lines, start)
         depth = depth + 1
         sub[#sub + 1] = e
       elseif l:match("^%s*}%s*$") and depth == 1 then
-        depth = 0; i = i + 1; break
+        i = i + 1; break
       else
         depth = depth + U.raw_brace_delta(l)
         sub[#sub + 1] = e

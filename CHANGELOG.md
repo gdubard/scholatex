@@ -7,6 +7,160 @@ and the project adheres to a simple `MAJOR.MINOR` scheme. Entries marked
 **BREAKING** change the surface syntax: a document written for an earlier
 version may need a small edit, described in the migration note.
 
+## [2.5] — 2026-07-03
+
+The lycée release: the nine figures and tables of the French secondary
+curriculum that were still missing, so that a worksheet from seconde to
+terminale never leaves the tag language — plus a full transcendental
+function library, document-wide display rounding, and an audit pass
+(one mathematical bug, sandbox hardening, zero static-analysis warnings).
+
+### Added
+
+- **The equation form of `<fn>`.** `<fn f(x) = (x+2)(x-3)>` reads as the
+  board does ("let f(x) = ...") and registers itself under the left-hand
+  name — no `let`, no `name:`, no `expr:`. The variable is declared in
+  situ (`<fn g(t) = t^2 - 2t>`), and the table attributes stay attributes
+  after the expression (`x:`, `deriv:`, `var:`, `second:`). A tabular-only
+  object takes the head without `=`: `<fn v(x) x:{...} var:{...}>`.
+  Objects rebind **sequentially**: a later `<fn f(x) = ...>` shadows the
+  name for what follows, never for what precedes.
+- **Sign tables: `<signtab>`.** Automatic: `<signtab f>` **computes** the
+  rows from a product/quotient of affine factors — exact rational zeros, a
+  forbidden value at each denominator zero, even multiplicities known not
+  to change sign, one row per written factor plus the conclusion. Manual
+  (block) form for rows the affine engine cannot derive:
+  `x+2 : - | 0 | + | +`, a `0` marking a zero, `||` a forbidden value; the
+  invariant is checked at compile time — a row that changes sign without a
+  `0` or `||` is an error.
+- **Weighted probability trees: `<tree>`.** Declarative branches
+  (`A 0.3 { ... }`), `!B` for the complementary event, symbolic
+  probabilities accepted. A node with exactly one branch receives its
+  complement automatically; siblings that sum to something other than 1
+  are a compile error. `products:on` writes `P(A ∩ B) = 0.18` at each
+  leaf. Layout computed.
+- **Areas, cobwebs and probability laws in `<plot>`.** `area:{a,b}` shades
+  under the curve, `between:g` between two curves; `cobweb:{u0, n}` draws
+  the staircase of a recurrent sequence with computed iterates;
+  `normal:{mu, sigma}` and `binomial:{n, p}` need no `<fn>` object, and
+  `area:` highlights `P(a ≤ X ≤ b)` on both.
+- **Descriptive statistics: `<stats>`.** Five `kind:`s — `bars`
+  (dictionary of frequencies; **symbolic keys render as horizontal bars**,
+  the categories on the y-axis, so long names never truncate),
+  `histogram` (draws *density*, so unequal classes stay honest), `pie`
+  (12 o'clock start, clockwise, percentages rounded, labels anchored
+  outside the disc), `boxplot` (French secondary-school quartiles),
+  `scatter` with `fit:on` (least-squares line). A Lua table declared with
+  `let` is passed to the tag by name: `let notes = {...}` then
+  `<stats kind:bars data:notes>` — one source, several figures.
+- **The trigonometric circle.** `<draw>trigcircle radius:4` — sixteen
+  remarkable angles in principal measure; `values:on` adds the dashed
+  cos/sin projections (exact at the remarkable angles, decimals
+  elsewhere); `step:{pi/12}` and `range:{0, pi/2}` for a dynamic close-up.
+- **The number line: `<numberline>`.** Declared interval sets
+  (`set:{[-2, 3) union (4, inf)}`, `points:`), or solved: the block form
+  takes the inequality and computes the set exactly — endpoints open or
+  closed as the inequality is strict or not, a denominator zero always
+  excluded, an isolated solution a point.
+- **Space geometry: `solid` in `<draw>`.** `cube`, `cuboid`, `pyramid`,
+  `cylinder`, `cone`, `sphere` in the French *perspective cavalière*.
+  Hidden edges are **computed, not declared**: an edge is dashed exactly
+  when both its faces are hidden. Vertex labels go into the widest empty
+  angular sector between the projected edges, never onto an edge.
+- **A transcendental function library**, one shared source
+  (`scholatex-numeval`) backing both the `#{...}` interpolation and
+  `<plot>`, radians by default: circular `sin cos tan cot sec csc` and
+  inverses (`sind`/`arcsind`… for degrees), hyperbolic
+  `sinh cosh tanh coth sech csch` and inverses, `exp`, `ln`, `log`
+  (base 10), `log2`, `logb(v, b)`, `sqrt cbrt abs sign floor ceil`,
+  `round(x, d)`, and the constants `pi` and `e`. `<plot>` translates each
+  to its pgfplots form; the value and the curve come from the identical
+  definition.
+- **`precision` class option — document-wide display rounding.**
+  `precision:N` rounds every number the reader sees to N decimals —
+  `#{...}` values, pie percentages, trig-circle projections, figure
+  measure labels — trailing zeros dropped (`3.50` → `3.5`); default `-1`
+  prints as computed. A local `round(x, d)` overrides it for one value.
+  Internal TikZ coordinates keep full precision.
+- **`scale:F` on `<draw>`.** One factor multiplies every coordinate of
+  the picture and leaves the text size alone (default 1, all forms:
+  inline, block, `axes:`).
+- **`<box>`** accepts `sep:` (canonical) and `boxsep:` (synonym) for the
+  inner padding.
+
+### Changed
+
+- The class loads pgfplots' `fillbetween` library.
+- Point labels in `<draw axes>` are deferred and placed in the freest
+  diagonal quadrant relative to every line, tangent, region boundary and
+  vector arrow through the point.
+- Axis labels of `<plot>` are anchored past the axis tips, so the ylabel
+  of a density centred at 0 no longer sits on the peak of the bell.
+- Warnings reach the `.log` (via `texio`), not just stderr.
+- The example files are regrouped one domain per file: `analysis.tex`
+  (vocabulary, sign tables, number line, areas, cobwebs, four full
+  function studies from polynomial to hyperbolic), `geometry.tex`
+  (figures, axes, trigonometric circle, solids),
+  `statistics-probability.tex` (vocabulary, trees, laws, descriptive
+  statistics), alongside `basics.tex`, `algebra.tex`, `text-style.tex`
+  and `containers.tex`.
+- The tree is **luacheck-clean** (a `.luacheckrc` documents the LuaTeX
+  globals); a 48-test regression suite ships as `tests-audit.lua`.
+
+### Fixed
+
+- **General circle equation in `<draw axes>`**: non-monic coefficients
+  (`2x^2 + 2y^2 - 4x - 4y - 8 = 0`) silently produced a wrong circle; the
+  equation is now normalised, an ellipse or an unreadable term is a
+  compile error. The name of an equation-form circle is registered, so
+  `tangent to:C` finds it.
+- **Untrusted mode**: the sandbox now bounds memory as well as
+  instructions — a doubling-concatenation bomb aborts cleanly instead of
+  starving the TeX run.
+- `for k in [1, 2, 3]` keeps numeric items as numbers, so `if k > 2`
+  compares numbers, exactly as the range form does.
+- Counter styles in the attribute form (`<section ROMAN>Title`) work as
+  documented.
+- The class reopens the actual source file (`status.filename`), robust
+  against `-jobname` and `.ltx`; a literal `\end{document}` in the body
+  warns instead of truncating silently; CRLF endings are normalised.
+- Triangle constructor error messages are in English and the isosceles
+  diagnostic is reachable; `<fn>` objects reset between transpilations.
+
+## [2.4] — 2026-06-29
+
+### Added
+
+- **Analytic geometry in `<draw>`: the `axes:` mode.** With
+  `axes:{xmin,xmax,ymin,ymax}` the block draws a graduated cartesian frame
+  and reads every line as a coordinate directive rather than a construction.
+  One unit stays one centimetre and the drawing is clipped to the window.
+  - `point NAME (x,y)` places and labels a point; the name is then available
+    to later lines.
+  - `vector u (x,y)` draws a free vector from the origin; `vector AB` the
+    bound vector between two placed points. A named vector is remembered:
+    `vector s = u+v` / `u-v` draws the sum or difference, labelled with the
+    expression along the arrow; `from:` translates any vector's tail (a
+    placed point, a literal pair, or `~u` for the tip of a drawn vector);
+    `style:` restyles a copy (`style:dashed-gray`, `style:Blue`).
+  - `line` by equation (`y = 2x-1`, `x = -3`, or the general `2x+3y = 6`) or
+    `line through A B` by two placed points.
+  - `circle center:A radius:r` (centre a placed point or a literal pair),
+    or by equation `circle x^2+y^2 = 4`; a named circle carries a
+    `tangent to:C at:P` at a point on it.
+  - `region` shades the half-plane of a linear inequality (`<`, `>`), the
+    boundary dashed.
+  The construction mode of 2.3 (named figures, measurements, composites,
+  loops) is unchanged: a block without `axes:` behaves exactly as before.
+- **Parametric and polar curves in `<plot>`: the `kind:` field.**
+  `kind:parametric` reads `expr:{x(t), y(t)}` over `t:{a, b}`;
+  `kind:polar` reads `expr:{r(theta)}` over `theta:{a, b}` and is drawn as
+  the pair `(r cos theta, r sin theta)`. Bounds accept `pi`. Conics are
+  drawn through their parametrisation (ellipse `{a cos(t), b sin(t)}`,
+  parabola `{t, t^2}`, hyperbola `{a cosh(t), b sinh(t)}`) — no separate
+  conic directive. A `<plot>` without `kind:` is the function graph of 2.1,
+  unchanged.
+
 ## [2.3] — 2026-06-28
 
 ### Added

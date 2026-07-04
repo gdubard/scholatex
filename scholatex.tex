@@ -105,7 +105,7 @@ built on LuaLaTeX\par}
 \vspace{3cm}
 {\large Gérard Dubard\par}
 \vspace{0.4cm}
-{\large Version 2.3\par}
+{\large Version 2.5\par}
 \vfill
 {\small Released under the GNU General Public License v3.0\par}
 \end{titlepage}
@@ -446,7 +446,7 @@ Content here.
 
 Options: \tg{line:} frame colour, \tg{fill:} background, \tg{text:} text
 colour, \tg{radius:N} rounded corners (mm), \tg{width:N} or \tg{width:N\%},
-\tg{boxrule:N}, \tg{boxsep:N}, \tg{break:yes} (allow page breaks),
+\tg{boxrule:N}, \tg{sep:N} (inner padding, mm; \tg{boxsep:N} is a synonym), \tg{break:yes} (allow page breaks),
 \tg{title:\{\dots\}}, \tg{titlefill:}, \tg{titletext:}. A line containing
 only \tg{-{-}-} splits a box into an upper and a lower region.
 
@@ -581,7 +581,10 @@ A draw block runs the same loops as the rest of the language,
 loop variable and \tg{\#\{expr\}} evaluates an expression, so point names and
 measurements can be generated. The attribute \tg{rotate:$\theta$} turns a
 figure by $\theta$ degrees about its first point, and \tg{labels:off} hides
-the vertex names. Twelve isosceles triangles sharing an apex, stepped
+the vertex names. On the tag itself, \tg{scale:F} multiplies every
+coordinate of the picture by \tg{F} while leaving the text size alone
+(default \tg{1}; it applies to every form of \tg{<draw>} --- figures,
+axes, trigcircle, solids). Twelve isosceles triangles sharing an apex, stepped
 $30^\circ$ apart, fan into a full turn:
 
 \begin{slcode}
@@ -625,6 +628,123 @@ a disc make a sun:
   }
 }
 \end{slcode}
+
+\subsection*{In a coordinate frame: \texttt{axes:}}
+
+The figures above are \emph{constructed} --- you give measurements and the
+coordinates are computed. The opposite need, a graduated frame on which
+points are placed \emph{at} their coordinates, is the same block in analytic
+mode. \tg{<draw axes:\{xmin,xmax,ymin,ymax\}>} draws the axes and switches
+every line to the analytic vocabulary; without \tg{axes:} the block stays in
+the construction mode above. One unit is still one centimetre, and the
+drawing is clipped to the declared window.
+
+\begin{slcode}
+<draw axes:{-5,5,-5,5}>{
+  point A (2,3)
+  point B (-1,1)
+  vector u (3,1)
+  line y = 2x-1
+  line through A B
+}
+\end{slcode}
+
+Each directive takes coordinates, never measurements. \tg{point NAME (x,y)}
+places and labels a point; a placed name is then available to later lines.
+\tg{vector u (x,y)} draws a free vector from the origin, \tg{vector AB} the
+bound vector between two placed points. \tg{line} accepts an equation
+(\tg{y = 2x-1}, \tg{x = -3}, or the general \tg{2x+3y = 6}) or
+\tg{line through A B}.
+
+A named vector is remembered and composes. \tg{vector s = u+v} (or
+\tg{u-v}) draws the sum or difference, labelled with the expression itself,
+written along the arrow. \tg{from:} moves any vector's tail --- to a placed
+point, a literal pair, or \tg{\textasciitilde{}u}, the \emph{tip} of a drawn
+vector --- and \tg{style:} restyles the copy (\tg{style:dashed-gray},
+\tg{style:Blue}). The parallelogram and triangle rules then read on one
+frame: each side is copied dashed to the far tip, the sum closes the
+parallelogram, and the difference runs from the tip of \tg{v} to the tip of
+\tg{u}:
+
+\begin{slcode}
+<draw axes:{-5,5,-5,5}>{
+  vector u (3,1)
+  vector v (1,3)
+  vector v from:~u style:dashed-gray
+  vector u from:~v style:dashed-gray
+  vector s = u+v style:Blue
+  vector d = u-v from:~v style:Red
+}
+\end{slcode}
+
+A circle carries a tangent at a point on it. \tg{circle} takes \tg{center:}
+(a placed point or a literal pair) with \tg{radius:}, or an equation
+\tg{x\^{}2+y\^{}2 = 4}; a named circle (\tg{circle C \dots}) then accepts a
+\tg{tangent to:C at:P}:
+
+\begin{slcode}
+<draw axes:{-5,5,-5,5}>{
+  point T (0,3)
+  circle C center:(0,0) radius:3
+  tangent to:C at:T
+}
+\end{slcode}
+
+\tg{region} shades the half-plane of a linear inequality (\tg{<}, \tg{>}),
+the boundary drawn dashed:
+
+\begin{slcode}
+<draw axes:{-5,5,-5,5}>{
+  region y > x+1
+}
+\end{slcode}
+
+\textbf{The trigonometric circle.}
+
+One synthetic line draws the circle, its axes, and the sixteen remarkable
+angles labelled by their principal measure in $\left(-\pi, \pi\right]$:
+
+\begin{slcode}
+<draw>trigcircle radius:4
+<draw>trigcircle radius:4 values:on
+<draw>trigcircle radius:4 step:{pi/6}
+<draw>trigcircle radius:4 range:{0, pi/2} step:{pi/12} values:on
+\end{slcode}
+
+\tg{radius:} is in centimetres (default 4). \tg{step:} replaces the
+remarkable set by the multiples of a fraction of $\pi$; \tg{range:}
+restricts to an arc --- the first-quadrant close-up. \tg{values:on} adds
+the dashed cosine and sine projections of the drawn first-quadrant angles,
+exact ($\tfrac12$, $\tfrac{\sqrt2}2$, $\tfrac{\sqrt3}2$) at the
+remarkable ones, two decimals elsewhere. Labels too crowded to read are a
+compilation error suggesting a larger step.
+
+\textbf{Solids in cabinet projection.}
+
+\tg{solid} lines draw the space-geometry repertoire in the French
+\emph{perspective cavali\`ere}: receding axis at $45^{\circ}$, ratio $0.5$
+(override with \tg{angle:} and \tg{ratio:}). Hidden edges are
+\emph{computed}, not declared: a face of a convex solid is visible exactly
+when the projection preserves its outward orientation, and an edge is dashed
+exactly when both of its faces are hidden. Several solids in one block sit
+side by side.
+
+\begin{slcode}
+<draw>{
+  solid cube ABCDEFGH edge:4
+  solid pyramid SABCD base:4 height:5
+}
+<draw>{
+  solid cuboid sides:{5, 3, 2}
+  solid cylinder radius:1.5 height:4
+  solid cone radius:2 height:4.5
+  solid sphere radius:2.5
+}
+\end{slcode}
+
+Vertex names are optional on \tg{cube}, \tg{cuboid} (eight letters, base
+then top) and \tg{pyramid} (apex first). Plane sections are not in this
+release.
 
 % =====================================================================
 \part{Maths}
@@ -967,6 +1087,22 @@ then read by \tg{<vartab>} (the table) and \tg{<plot>} (the graph).
 
 \textbf{The function object.}
 
+The equation form registers itself under its left-hand name and reads as
+the board does; the variable is declared in situ, table attributes stay
+attributes after the expression:
+
+\begin{slcode}
+<fn f(x) = (x+2)(x-3)>
+<fn g(t) = t^2 - 2t  x:{-inf | 1 | +inf}  deriv:{- | +}
+                     var:{+inf \ -1 / +inf}>
+\end{slcode}
+
+A tabular-only object takes the head without \tg{=} ---
+\tg{<fn v(x) x:\{...\} var:\{...\}>}. Objects rebind sequentially: a
+later \tg{<fn f(x) = ...>} shadows the name for what follows, never for
+what precedes. The 2.4 \tg{name:}/\tg{expr:} attributes still parse but
+are deprecated; the \tg{let} binding remains available:
+
 \begin{slcode}
 let k = <fn name:{k(x)}
             expr:{(x^2+1)/(x-1)}
@@ -1003,6 +1139,39 @@ placed automatically. In \tg{var:}, a connector is \tg{/} (rising) or
 \tg{2/3}, it is a fraction. A value between two arrows of the same direction
 is rejected: the table lists only bounds and extrema.
 
+\textbf{The sign table.}
+
+\tg{<signtab>} is \tg{<vartab>}'s companion for factored expressions. The
+automatic form \emph{computes} the rows from a product or quotient of
+affine factors --- rational zeros printed exactly, a forbidden value at
+each denominator zero, even multiplicities known not to change sign:
+
+\begin{slcode}
+<fn f(x) = (x+2)(x-3)>
+<signtab f>
+
+<fn g(x) = (x+1)/(x-2)>
+<signtab g>
+\end{slcode}
+
+The manual block form is the general one, for rows the affine engine
+cannot derive (a trigonometric factor, an irreducible quadratic): one row
+per factor, usually a conclusion row last.
+
+\begin{slcode}
+<signtab x:{-inf | -2 | 3 | +inf}>{
+  x+2  : - | 0 | + | +
+  x-3  : - | - | 0 | +
+  f(x) : + | 0 | - | 0 | +
+}
+\end{slcode}
+
+A cell is a sign per interval; a \tg{0} marks a zero at the boundary it
+follows, \tg{||} a forbidden value. The invariant is checked: a row that
+changes sign without a \tg{0} or a \tg{||} at the boundary is a compilation
+error, not a wrong table in print --- an expression cannot change sign
+without vanishing or ceasing to exist.
+
 \textbf{The graph.}
 
 \begin{slcode}
@@ -1020,6 +1189,91 @@ branches. Supported in \tg{expr:}: \verb!+ - * / ^!, parentheses,
 
 \tg{<vartab>} is declarative, \tg{<plot>} is computed: keeping \tg{var:}
 consistent with \tg{expr:} is the author's responsibility.
+
+\textbf{Parametric and polar curves.}
+
+A curve that is not a function graph is the same \tg{<plot>} with \tg{kind:}.
+\tg{kind:parametric} reads \tg{expr:\{x(t), y(t)\}} --- two components in the
+parameter \texttt{t} --- over the window \tg{t:\{a, b\}}. \tg{kind:polar}
+reads \tg{expr:\{r(theta)\}} over \tg{theta:\{a, b\}} and is drawn as the
+parametric pair $(r\cos\theta, r\sin\theta)$. Bounds may use \texttt{pi}
+(\tg{t:\{0, 2pi\}}), and \tg{x:} / \tg{y:} set the display window as before.
+
+\begin{slcode}
+let ell = <fn expr:{3cos(t), 2sin(t)}>
+<plot ell kind:parametric t:{0, 2pi} x:{-4, 4} y:{-3, 3}>
+
+let cardio = <fn expr:{1+cos(theta)}>
+<plot cardio kind:polar theta:{0, 2pi}>
+\end{slcode}
+
+A conic is drawn through its parametrisation: an ellipse as
+\tg{\{a cos(t), b sin(t)\}}, a parabola as \tg{\{t, t\^{}2\}}, a branch of a
+hyperbola as \tg{\{a cosh(t), b sinh(t)\}} --- no separate conic directive,
+the parametric form already names them all.
+
+\textbf{Areas.}
+
+\tg{area:\{a, b\}} shades the region between the curve and the $x$-axis on
+$[a, b]$, dashed verticals at the bounds; \tg{between:g} shades between two
+curves instead, clipped to \tg{area:} when given:
+
+\begin{slcode}
+<plot f x:{-1, 4} area:{1, 3}>
+<plot f x:{-1, 4} between:g area:{0, 3}>
+\end{slcode}
+
+\textbf{Sequences: the cobweb.}
+
+\tg{cobweb:\{u0\}} (or \tg{cobweb:\{u0, n\}}, default $n = 8$) draws the
+bisector $y = x$ and the staircase of $u_{n+1} = f(u_n)$, the iterates
+computed at compile time and the first three labelled on the axis:
+
+\begin{slcode}
+let h = <fn name:{h(x)} expr:{sqrt(2x+3)}>
+<plot h x:{0, 4} y:{0, 4} cobweb:{0.2, 10}>
+\end{slcode}
+
+\textbf{Probability laws.}
+
+The two laws of the lyc\'ee need no \tg{<fn>} object; \tg{area:} highlights
+$P(a \leq X \leq b)$ on both --- shaded under the Gaussian, stronger bars on
+the binomial:
+
+\begin{slcode}
+<plot normal:{0, 1} area:{-1, 1.5}>
+<plot binomial:{12, 0.4} area:{3, 6}>
+\end{slcode}
+
+The normal window defaults to $\mu \pm 4\sigma$; the binomial masses are
+computed exactly.
+
+\textbf{The number line.}
+
+\tg{<numberline>} draws the graduated line with interval sets --- the figure
+of inequalities and absolute values:
+
+\begin{slcode}
+<numberline x:{-5, 5} set:{[-2, 3) union (4, inf)} points:{-4}>
+\end{slcode}
+
+The block form \emph{solves}: it takes one inequality (a tag's braces
+cannot carry \tg{<} and \tg{>}) and computes the set exactly --- an
+affine expression against a constant, a product or quotient of affine
+factors against 0, or \tg{abs(affine)} against a constant. Strictness
+decides open or closed; a denominator zero is always excluded; an
+isolated solution is a point.
+
+\begin{slcode}
+<numberline x:{-5, 5}>{
+  abs(x - 1/2) >= 5/2
+}
+\end{slcode}
+
+Brackets follow the international convention (\tg{[ ]} included, \tg{( )}
+excluded); a bound may be \tg{inf}, the segment then runs to the arrow.
+\tg{points:} pins isolated values. One unit is one centimetre, halved
+automatically while the line exceeds the page.
 
 % =====================================================================
 \section{Probability}
@@ -1041,6 +1295,83 @@ Counting feeds probability; the blackboard operators are the doubled letters \tg
 \bottomrule
 \end{tabular}
 \end{center}
+
+\textbf{The weighted tree.}
+
+\tg{<tree>} is the most-drawn object of premi\`ere and terminale. Each line
+reads \tg{LABEL PROBABILITY}, an optional brace opening the children; a
+leading \tg{!} is the complementary event, rendered with the overline.
+Probabilities may be numbers or symbols (\tg{p}, \tg{1-p}), both typeset
+through the math mini-language.
+
+A node with exactly one branch receives its complement automatically ---
+the only case that is mathematically determined; sibling probabilities
+that do not sum to 1 are a compilation error.
+
+\begin{slcode}
+<tree products:on>{
+  A 0.3 {
+    B 0.6
+  }
+  !A 0.7 {
+    B 0.1
+  }
+}
+\end{slcode}
+
+\tg{products:on} writes $P(A \cap B) = 0.18$ at the end of each leaf: the
+exact product when every probability on the path is numeric, the symbolic
+chain otherwise. The layout is computed --- leaves evenly spaced, each node
+at the mean height of its children. No loops inside the block: a tree is
+written by hand, that is the point of a tree.
+
+% =====================================================================
+\section{Statistics}
+% =====================================================================
+
+Descriptive statistics is one tag, \tg{<stats>}, five \tg{kind:}s, every
+number computed at compile time:
+
+\begin{slcode}
+<stats kind:bars data:{1: 4 | 2: 7 | 3: 2}>
+<stats kind:bars data:{Walk: 5 | Bus: 3 | Bike: 2}>
+<stats kind:histogram bounds:{0, 5, 10, 20} counts:{3, 7, 2}>
+<stats kind:pie data:{Walk: 5 | Bus: 3 | Bike: 2}>
+<stats kind:boxplot data:{12, 15, 9, 21, 14, 15, 18}>
+<stats kind:scatter data:{(1, 2.1) (2, 2.6) (3, 3.4)} fit:on>
+\end{slcode}
+
+Three honesty guarantees, because a statistics figure teaches by its
+construction: the histogram draws \emph{density} (count over class width),
+so unequal classes stay truthful; the boxplot uses the French
+secondary-school quartiles ($Q_1$ the smallest value with at least a quarter
+of the data at or below it, $Q_3$ likewise at three quarters); \tg{fit:on}
+draws the least-squares line, computed, not eyeballed. The pie starts at
+twelve o'clock and runs clockwise, percentages appended to the labels.
+The dictionary \tg{key: value | ...} is the form of the mappings (bars
+--- numeric keys give a numeric axis, words give categories --- and pie);
+pairs \tg{(x, y)} remain the form of the clouds, where an abscissa may
+repeat.
+
+A Lua table declared with \tg{let} is passed by name --- the home of
+data reused across figures:
+
+\begin{slcode}
+let notes = {
+    Mathematiques = 15.5,
+    Francais = 12.0,
+    Anglais = 18.0
+}
+<stats kind:bars data:notes>
+<stats kind:pie data:notes>
+\end{slcode}
+
+A Lua table has no writing order: map keys come out \emph{sorted}
+(numbers numerically, words alphabetically); when the order matters, a
+list of pairs keeps it: \tg{let t = \{\{"T1", 11.5\}, \{"T2", 13\}\}}.
+Lists of numbers feed \tg{boxplot}, lists of pairs feed \tg{scatter},
+two list variables feed \tg{histogram} through \tg{bounds:} and
+\tg{counts:}.
 
 \part{Programming the document}
 
@@ -1133,8 +1464,7 @@ documents that together exercise every feature:
 \tg{basics.tex} & mini-language, sets, logic, negation, integer part, the overline, arithmetic helpers \\
 \tg{algebra.tex} & matrix, determinant, augmented matrix, systems, and the linear-algebra vocabulary \\
 \tg{analysis.tex} & operators, limits, trigonometry, derivatives, the vector operators, integrals, transforms \\
-\tg{probability.tex} & counting, probability and expectation, variance, distributions, density \\
-\tg{functions.tex} & full function studies with variation tables and plots \\
+\tg{statistics-probability.tex} & counting, probability, variance, distributions --- then trees, the two laws and the descriptive-statistics figures \\
 \bottomrule
 \end{tabular}
 \end{center}

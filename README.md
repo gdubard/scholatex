@@ -3,7 +3,7 @@
 **Print-ready teaching worksheets, without writing LaTeX.** — A small, consistent tag language for the documents a teacher actually makes.
 
 [![CTAN](https://img.shields.io/badge/CTAN-scholatex-d35400?style=flat-square)](https://ctan.org/pkg/scholatex)
-[![Version](https://img.shields.io/badge/version-2.3-2980b9?style=flat-square)](https://ctan.org/pkg/scholatex)
+[![Version](https://img.shields.io/badge/version-2.5-2980b9?style=flat-square)](https://ctan.org/pkg/scholatex)
 [![Engine](https://img.shields.io/badge/engine-LuaLaTeX-1F3A5F?style=flat-square)](https://www.luatex.org/)
 [![TeX Live](https://img.shields.io/badge/TeX_Live-included-27ae60?style=flat-square)](https://tug.org/texlive/)
 [![License](https://img.shields.io/badge/license-GPL_v3+-8e44ad?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
@@ -128,6 +128,7 @@ Set in `\documentclass[...]{scholatex}`:
 | `scriptscale` | `100` | scale (%) of `up`/`down` scripts |
 | `padding` | `2` | inner padding (mm) between a box/grid frame and its content; override locally with `sep:N` |
 | `lang` | `fr` | decimal separator: `fr` (comma) or `en` (point); affects typed and interpolated decimals alike |
+| `precision` | `-1` | decimals a computed `#{...}` value is rounded to for display (`-1` = no rounding); `round(x, d)` overrides locally |
 | `untrusted` | `false` | run document Lua in a restricted sandbox — see [Security](#security) |
 
 Headings carry no extra vertical space or built-in colour: to style one, fold a heading keyword into an alias, e.g. `let h = <line Navy b section>` then `<h>My title`.
@@ -369,6 +370,17 @@ x - y = 1
 
 Inject a computed value with `#{expr}` (or `#name`), including inside maths: `$#k^2$`. Decimal numbers follow the `lang` option.
 
+**The expression computes with a full function library.** Inside `#{...}` you have the transcendental functions, in radians by default:
+
+- circular `sin cos tan cot sec csc` and their inverses `arcsin arccos arctan`; the degree variants `sind cosd tand` and `arcsind arccosd arctand` take or return degrees, so `#{sind(30)}` is `0.5` and `#{arcsind(0.5)}` is `30`;
+- hyperbolic `sinh cosh tanh coth sech csch` and inverses `arcsinh arccosh arctanh`;
+- exponential and logarithms `exp`, `ln` (natural), `log` (base 10), `log2`, `logb(v, b)` (base *b*);
+- algebraic and rounding `sqrt cbrt abs sign min max floor ceil` and `round(x, d)` (to *d* decimals, ties away from zero), with the constants `pi` and `e`.
+
+So `#{sin(pi/6)}`, `#{exp(1)}`, `#{logb(81, 3)}` all evaluate. The same library backs `<plot>`, so a curve of `cosh(x)` or `arctan(x)` draws from the identical definition.
+
+**Rounding for display: `precision`.** The class option `precision:N` rounds every computed `#{...}` value to *N* decimals, dropping trailing zeros (`3.50` prints `3.5`, `4.0` prints `4`). The default `-1` prints the number as computed. `precision` sets the document-wide default; `round(x, d)` overrides it locally in any single expression. So `precision:2` turns `#{1/3}` into `0.33` while `#{round(1/3, 5)}` still gives `0.33333`.
+
 ### Advanced vocabulary
 
 For the upper years, the mini-language carries the named notation of
@@ -445,6 +457,25 @@ Three tags turn a function into a variation table and a curve. They share one so
 
 ### The function object: `<fn>`
 
+The equation form reads as the board does and registers itself under its left-hand name — the variable is declared in situ, and a study is then three lines that read like the exercise:
+
+```
+<fn f(x) = (x+2)(x-3)>
+<signtab f>
+<plot f x:{-4, 5}>
+```
+
+Table attributes stay attributes after the expression:
+
+```
+<fn g(t) = t^2 - 2t
+    x:{-inf | 1 | +inf}
+    deriv:{- | +}
+    var:{+inf \ -1 / +inf}>
+```
+
+A tabular-only object (a table without a formula) takes the head without `=` — `<fn v(x) x:{...} deriv:{...} var:{...}>`. Objects rebind **sequentially**: a later `<fn f(x) = ...>` shadows the name for what follows, never for what precedes — each `<signtab f>` or `<plot f>` sees the definition above it. The 2.4 `name:`/`expr:` attributes still parse but are deprecated; the equation form is the canonical one:
+
 ```
 let k = <fn name:{k(x)}
             expr:{(x^2+1)/(x-1)}
@@ -484,6 +515,33 @@ let k = <fn name:{k(x)}
 
 Rules the table enforces: a value between two arrows of the **same** direction is rejected — a variation table lists only bounds and extrema, never a point on a monotone branch (that point belongs on the plot). When `f″` and `f′` show together, `x:` must list the **union** of their zeros, since all rows share the same columns.
 
+### The sign table: `<signtab>`
+
+The companion of `<vartab>` for factored expressions. **Automatic**: the rows are computed from a product/quotient of affine factors — exact rational zeros, a forbidden value at each denominator zero, even multiplicities known not to change sign:
+
+```
+<fn f(x) = (x+2)(x-3)>
+<signtab f>
+
+<fn g(x) = (x+1)/(x-2)>
+<signtab g>
+
+<fn h(x) = -2(x+1)^2 (x - 1/2)>
+<signtab h>
+```
+
+**Manual** (the general form, for rows the affine engine cannot derive) — one row per factor, usually a conclusion row last:
+
+```
+<signtab x:{-inf | -2 | 3 | +inf}>{
+    x+2  : - | 0 | + | +
+    x-3  : - | - | 0 | +
+    f(x) : + | 0 | - | 0 | +
+}
+```
+
+A cell is a sign per interval; a `0` marks a zero **at the boundary it follows**, `||` a forbidden value. The invariant is checked at compile time: a row that changes sign without a `0` or a `||` at the boundary is an error, not a wrong table in print — an expression cannot change sign without vanishing or ceasing to exist there.
+
 ### The graph: `<plot>`
 
 ```
@@ -500,7 +558,113 @@ Rules the table enforces: a value between two arrows of the **same** direction i
 
 `<vartab>` is declarative, `<plot>` is computed. If `var:` does not match `expr:`, the table and the curve contradict each other silently — keeping them consistent is yours to ensure.
 
+**Areas.** `area:{a,b}` shades the region between the curve and the x-axis on [a, b], with dashed verticals at the bounds; `between:g` shades between two curves instead (clipped to `area:` when given):
+
+```
+<plot f x:{-1, 4} area:{1, 3}>
+<plot f x:{-1, 4} between:g area:{0, 3}>
+```
+
+**Sequences: the cobweb.** `cobweb:{u0}` (or `cobweb:{u0, n}`, default n = 8) draws the bisector y = x and the staircase of u(n+1) = f(u(n)); the iterates are computed at compile time and the first three labelled on the axis:
+
+```
+let h = <fn name:{h(x)} expr:{sqrt(2x+3)}>
+<plot h x:{0, 4} y:{0, 4} cobweb:{0.2, 10}>
+```
+
+**Probability laws.** The two laws of the lycée need no `<fn>` object; `area:` highlights P(a ≤ X ≤ b) on both — shaded under the Gaussian, stronger bars on the binomial. The normal window defaults to μ ± 4σ; the binomial masses are computed exactly:
+
+```
+<plot normal:{0, 1} area:{-1, 1.5}>
+<plot binomial:{12, 0.4} area:{3, 6}>
+```
+
 > Maths note: in prose use the mini-language spellings `!=`, `+-`, `>=`, `<=` (not `\neq`, `\pm`, …). Write `$f(x)$` to typeset a formula; an unbracketed `f(x)/x` parses as `f` times `(x)/x`, so phrase it as "the ratio of `$f(x)$` to `$x$`".
+
+---
+
+## The lycée toolbox
+
+Five more figures complete the secondary curriculum (2.5).
+
+**The weighted probability tree** — `<tree>`, the most-drawn object of première and terminale. Each line reads `LABEL PROBABILITY`, an optional brace opening the children; a leading `!` is the complementary event (overline). Probabilities may be numbers or symbols (`p`, `1-p`). A node with exactly one branch receives its complement automatically — the only case that is mathematically determined; siblings that sum to something other than 1 are a compile error. `products:on` writes P(A ∩ B) = 0.18 at each leaf — the exact product when numeric, the symbolic chain otherwise. The layout is computed: leaves evenly spaced, nodes at the mean height of their children.
+
+```
+<tree products:on>{
+    A 0.3 {
+        B 0.6
+    }
+    !A 0.7 {
+        B 0.1
+    }
+}
+```
+
+**Descriptive statistics** — one tag, `<stats>`, five `kind:`s, every number computed at compile time:
+
+```
+<stats kind:bars data:{1: 4 | 2: 7 | 3: 2}>
+<stats kind:bars data:{Walk: 5 | Bus: 3 | Bike: 2}>
+<stats kind:histogram bounds:{0, 5, 10, 20} counts:{3, 7, 2}>
+<stats kind:pie data:{Walk: 5 | Bus: 3 | Bike: 2}>
+<stats kind:boxplot data:{12, 15, 9, 21, 14, 15, 18}>
+<stats kind:scatter data:{(1, 2.1) (2, 2.6) (3, 3.4)} fit:on>
+```
+
+The dictionary `key: value | …` is the form of the *mappings* — bars (numeric keys give a numeric axis, words give categories) and pie; pairs `(x, y)` remain the form of the *clouds*, where an abscissa may repeat.
+
+**Data variables.** A Lua table declared with `let` is passed by name — the natural home of data reused across figures:
+
+```
+let notes = {
+    Mathematiques = 15.5,
+    Francais = 12.0,
+    Anglais = 18.0
+}
+<stats kind:bars data:notes>
+<stats kind:pie data:notes>
+```
+
+A Lua table has no writing order, so map keys come out **sorted** (numbers numerically, words alphabetically); when the order matters, write a list of pairs, which keeps it: `let trimestres = {{"T1", 11.5}, {"T2", 13.0}}`. Lists of numbers feed `boxplot`, lists of `{x, y}` pairs feed `scatter`, and two list variables feed `histogram` through `bounds:` and `counts:`.
+
+Three honesty guarantees, because a statistics figure teaches by its construction: the histogram draws **density** (count over class width), so unequal classes stay truthful; the boxplot uses the French secondary-school quartiles (Q1 the smallest value with at least a quarter of the data at or below it, Q3 likewise at three quarters); `fit:on` draws the least-squares line — computed, not eyeballed.
+
+**The number line** — `<numberline>`, the figure of inequalities and absolute values. **Solved**: the block form takes one inequality (the tag's braces cannot carry `<` and `>`) and computes the set exactly — an affine expression against a constant, a product/quotient of affine factors against 0, or `abs(affine)` against a constant. Strictness decides open/closed; a denominator zero is always excluded; an isolated solution is a point:
+
+```
+<numberline x:{-5, 5}>{
+    abs(x - 1/2) >= 5/2
+}
+```
+
+**Declared**, when the set is given rather than solved — brackets follow the international convention (`[ ]` included, `( )` excluded); a bound may be `inf`, the segment then runs to the arrow; `points:` pins isolated values:
+
+```
+<numberline x:{-5, 5} set:{[-2, 3) union (4, inf)} points:{-4}>
+```
+
+**The trigonometric circle** — one `<draw>` line: the circle, its axes, and the sixteen remarkable angles labelled by their principal measure in (−π, π]. `values:on` adds the dashed cos/sin projections (exact values at the remarkable angles, two decimals elsewhere). Dynamic: `step:{pi/12}` draws the multiples of the step, `range:{0, pi/2}` restricts to an arc — the first-quadrant close-up. Labels too crowded to read are a compile error suggesting a larger step:
+
+```
+<draw>trigcircle radius:4 values:on
+<draw>trigcircle radius:4 step:{pi/6}
+<draw>trigcircle radius:4 range:{0, pi/2} step:{pi/12} values:on
+```
+
+**Space geometry** — `solid` lines inside `<draw>` render the full repertoire in the French *perspective cavalière* (receding axis at 45°, ratio 0.5; override with `angle:`/`ratio:`). Hidden edges are **computed, not declared**: a face of a convex solid is visible exactly when the projection preserves its outward orientation, and an edge is dashed exactly when both of its faces are hidden. Several solids in one block sit side by side. Vertex names are optional on `cube`, `cuboid` (eight letters, base then top) and `pyramid` (apex first). Plane sections are deferred to a later release.
+
+```
+<draw>{
+    solid cube ABCDEFGH edge:4
+    solid pyramid SABCD base:4 height:5
+}
+<draw>{
+    solid cuboid sides:{5, 3, 2}
+    solid cylinder radius:1.5 height:4
+    solid cone radius:2 height:4.5
+    solid sphere radius:2.5
+}
+```
 
 ---
 
@@ -512,7 +676,7 @@ Content here.
 }
 ```
 
-Options: `line:` frame colour, `fill:` background, `text:` text colour, `radius:N` rounded corners (mm), `width:N` or `width:N%`, `boxrule:N`, `boxsep:N`, `break:yes`, `title:{…}`, `titlefill:`, `titletext:`. A line containing only `---` splits a box into two regions.
+Options: `line:` frame colour, `fill:` background, `text:` text colour, `radius:N` rounded corners (mm), `width:N` or `width:N%`, `boxrule:N`, `sep:N` (inner padding, mm; `boxsep:N` is a synonym), `break:yes`, `title:{…}`, `titlefill:`, `titletext:`. A line containing only `---` splits a box into two regions.
 
 `<row gap:N>{ … }` lays its child boxes side by side, equal widths and equalised heights. A box also takes a two-letter placement code (`tl`…`br`, default `tl`); the vertical part needs a `height:` to act.
 
@@ -644,17 +808,17 @@ Setting `untrusted=true` in `\documentclass[...]{scholatex}` runs that Lua in a 
 
 ## Examples
 
-The `examples/` folder contains six self-contained, fully commented documents that together exercise every feature:
+The `examples/` folder contains eight self-contained, fully commented documents that together exercise every feature:
 
 | File | Covers |
 |------|--------|
 | `text-style.tex` | the case rule, styles, colours, fonts, sizes, alignment, tabs, skips, scripts; **factoring styles into aliases**; a table of contents from the heading keywords |
 | `containers.tex` | tables, boxes and the named-area grid, each built up from its simplest form to a full worksheet header |
 | `basics.tex` | the inline mini-language, number sets, quantifiers and connectives, negation with `!`, set relations, the integer part, the overline, and arithmetic helpers |
-| `analysis.tex` | operators with an index, limits (including the `arrow` form), trigonometry, derivatives, the vector operators, the integral family, transforms |
+| `analysis.tex` | operators with an index, limits, trigonometry, derivatives, the vector operators, the integral family, transforms — then sign tables, the number line, areas and cobwebs, and four full function studies (`<fn>`, `<vartab>`, `<plot>`), from polynomial to hyperbolic |
 | `algebra.tex` | the matrix / determinant / augmented-matrix / system blocks, and the linear-algebra vocabulary |
-| `probability.tex` | counting, probability and expectation, variance, distributions, density |
-| `functions.tex` | full function studies — `<fn>`, `<vartab>` and `<plot>` over polynomial, rational-with-horizontal-asymptote and rational-with-pole examples |
+| `geometry.tex` | angles, vectors, coordinate systems, the `<draw>` figures and axes — then the trigonometric circle and the six solids in cabinet projection |
+| `statistics-probability.tex` | counting, probability and expectation, variance, distributions and density — then weighted trees, the two laws, and the five figures of descriptive statistics |
 
 Compile any of them with `lualatex <file>.tex` from the `examples/` folder.
 
@@ -675,10 +839,17 @@ scholatex-grid.lua       the <grid> named-area layout block
 scholatex-section.lua    the <section>/<subsection>/<subsubsection> blocks
 scholatex-list.lua       the <list:STYLE> block
 scholatex-matrix.lua     the <matrix>/<det>/<bmatrix> and <system> blocks
-scholatex-vartab.lua     the <fn> object, <vartab> table and <plot> curve
-scholatex-figure.lua     the <draw> block: geometric figures, points and segments
+scholatex-vartab.lua     the <fn> object and the <vartab> table
+scholatex-signtab.lua    the <signtab> sign table
+scholatex-plot.lua       the <plot> curve: areas, cobwebs, probability laws
+scholatex-tree.lua       the <tree> weighted probability tree
+scholatex-stats.lua      the <stats> descriptive-statistics figures
+scholatex-numberline.lua the <numberline> graduated line, declared or solved
+scholatex-affine.lua     exact sign analysis of affine factors (rational zeros)
+scholatex-figure.lua     the <draw> block: figures, points, segments, trigcircle
+scholatex-solid.lua      space geometry in cabinet projection (solid …)
 scholatex-toc.lua        the <tableofcontents> tag
-examples/                six commented showcase documents
+examples/                eight commented showcase documents
 ```
 
 New tags register themselves via `scholatex.register_tag` / `scholatex.register_block`; a name clash raises an error rather than silently overwriting, so modules stay independent.
@@ -693,6 +864,32 @@ Errors point at the source line, e.g. `scholatex: line 12: unknown tag attribute
 
 ## What's new
 
+### 2.5
+
+The lycée release: the last nine figures and tables of the French secondary curriculum, so a worksheet from seconde to terminale never leaves the tag language.
+
+- **Sign tables `<signtab>`** — automatic (`<signtab f>` computes rows, exact zeros and forbidden values from the factored expression) or manual (one row per factor, `0` at a boundary zero, `||` at a forbidden value; a sign change without either is a compile error).
+- **Weighted probability trees `<tree>`** — declarative branches, `!B` for the complement, symbolic probabilities accepted, single branches auto-completed with their complement, `products:on` for the leaf products (exact when numeric).
+- **Areas in `<plot>`** — `area:{a,b}` under a curve, `between:g` between two curves.
+- **Cobwebs** — `cobweb:{u0, n}` draws the staircase of u(n+1) = f(u(n)) with the bisector, iterates computed.
+- **Probability laws** — `<plot normal:{mu,sigma}>` and `<plot binomial:{n,p}>` without an `<fn>` object; `area:` highlights P(a ≤ X ≤ b) on both.
+- **The `<fn>` equation form** — `<fn f(x) = (x+2)(x-3)>` registers itself under its left-hand name; the declaration reads like the exercise.
+- **Data variables** — `let notes = {Mathematiques = 15.5, ...}` then `<stats kind:bars data:notes>`; multi-line `let` tables accepted.
+- **Statistics `<stats>`** — bars (a dictionary of frequencies, numeric or categorical), histogram (density, honest with unequal classes), pie, boxplot (French quartiles), scatter with a computed least-squares `fit:on`.
+- **Trigonometric circle** — `<draw>trigcircle`, remarkable angles in principal measure by default, `step:{pi/12}` and `range:{0, pi/2}` for a chosen graduation or a first-quadrant close-up, `values:on` for the cos/sin projections.
+- **Number line `<numberline>`** — declared interval sets (included/excluded endpoints, `union`, infinite bounds, isolated points) or a solved inequality (block form), the set computed exactly.
+- **Space geometry** — `solid cube/cuboid/pyramid/cylinder/cone/sphere` in perspective cavalière, hidden edges computed from face orientation, solids laid side by side.
+
+### 2.4
+
+- **Analytic geometry in `<draw>`: the `axes:` mode** — `<draw axes:{xmin,xmax,ymin,ymax}>` draws a graduated cartesian frame and reads every line as a coordinate directive rather than a construction. One unit stays one centimetre and the drawing is clipped to the window. A block without `axes:` keeps the 2.3 construction behaviour unchanged.
+  - `point NAME (x,y)` places and labels a point, available to later lines by name.
+  - `vector u (x,y)` draws a free vector from the origin; `vector AB` the bound vector between two placed points. A named vector is remembered: `vector s = u+v` (or `u-v`) draws the sum or difference, labelled with the expression along the arrow; `from:` moves any vector's tail (a placed point, a literal pair, or `~u` for the tip of a drawn vector) and `style:` restyles the copy (`style:dashed-gray`, `style:Blue`) — the parallelogram and triangle rules read on a single frame.
+  - `line` by equation (`y = 2x-1`, `x = -3`, the general `2x+3y = 6`) or `line through A B`.
+  - `circle center:A radius:r` (centre a placed point or a literal pair) or by equation `circle x^2+y^2 = 4`; a named circle carries a `tangent to:C at:P` at a point on it.
+  - `region` shades the half-plane of a linear inequality (`<`, `>`), the boundary dashed.
+- **Parametric and polar curves in `<plot>`: the `kind:` field** — `kind:parametric` reads `expr:{x(t), y(t)}` over `t:{a, b}`; `kind:polar` reads `expr:{r(theta)}` over `theta:{a, b}`, drawn as `(r cos theta, r sin theta)`. Bounds accept `pi`. Conics follow from the parametrisation (ellipse `{a cos(t), b sin(t)}`, parabola `{t, t^2}`, hyperbola `{a cosh(t), b sinh(t)}`) — no separate conic directive. A `<plot>` without `kind:` is the function graph, unchanged.
+
 ### 2.3
 
 - **Figure drawing: the `<draw>` block** — a plane figure is described, not hand-placed. Name the shape and give its measurements; the coordinates are computed trigonometrically and emitted as hard numbers. One drawing unit is one centimetre, so `side:5` draws a 5 cm side.
@@ -703,7 +900,7 @@ Errors point at the source line, e.g. `scholatex: line 12: unknown tag attribute
 - **Coding and measurement** — `marks:on` codes equal sides and right angles; `measures:cm` / `measures:mm` labels each side with its length. Both are opt-in. When a figure has two pairs of equal sides of different lengths (kite, rectangle, parallelogram), the pairs are told apart by their tick count — a single tick on one pair, a double tick on the other — so a kite never reads as a rhombus.
 - **Composite figures** — several figures in one block share their points; a figure repeating a point is grafted onto it, and a figure sharing an edge deduces that edge's length and is flipped to the far side so the pieces abut. A shared edge is labelled once and ticked once, not twice.
 - **Multi-character point names** — besides the glued single letters (`triangle ABC`), a parenthesised comma-separated list names multi-character points: `triangle (O, A0, B0)`.
-- **Loops, interpolation and rotation inside `<draw>`** — the same `for VARIABLE in FROM..TO { … }` loops as the rest of the language; `#k` and `#{expr}` interpolate point names and measurements; `rotate:θ` turns a figure about its first point and `labels:off` hides the vertex names — enough to fan, rosette or step figures round a centre.
+- **Loops, interpolation and rotation inside `<draw>`** — the same `for VARIABLE in FROM..TO { … }` loops as the rest of the language; `#k` and `#{expr}` interpolate point names and measurements; `rotate:θ` turns a figure about its first point, `scale:F` multiplies every coordinate of the picture by F leaving the text size alone (default 1, any `<draw>` form), and `labels:off` hides the vertex names — enough to fan, rosette or step figures round a centre.
 - **Low-level primitives `point` and `line`** — `point(P)` places a dot at coordinates declared with `let P = {x, y}`; `line(A, B)` draws a segment between two points (names or literal `{x, y}` pairs), taking `measures:` like a figure side. As each coordinate is an ordinary expression, a loop can compute endpoints — the building block for free-form drawings.
 - **Examples** — a new `geometry` showcase covers the inline geometry vocabulary and the full `<draw>` block.
 

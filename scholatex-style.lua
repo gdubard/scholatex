@@ -145,12 +145,10 @@ end
 -- Emission order
 --
 -- A tag may combine many attributes; they must be emitted in a stable
--- order regardless of how the user typed them. EMIT_ORDER names the
--- categories in the order their wrappers open. classify_into sorts each
+-- order regardless of how the user typed them: page, lines, section,
+-- align, wrap -- the order their wrappers open. classify_into sorts each
 -- resolved descriptor into the matching bucket.
 -- ---------------------------------------------------------------------
-
-local EMIT_ORDER = {"page", "lines", "section", "align", "wrap"}
 
 local function classify_into(words, alias, buckets)
   local i, n = 1, #words
@@ -159,6 +157,10 @@ local function classify_into(words, alias, buckets)
     local r = S.resolve(w)
     if r and r.kind == "section" then
       buckets.section[#buckets.section + 1] = {r.cmd .. "{", "}"}
+    elseif r and r.kind == "counter" then
+      -- Numbering style of a heading level; paired with the section word of
+      -- the same tag in classify_split. Meaningless anywhere else.
+      buckets.counter = r.cmd
     elseif r and r.kind == "page" then
       buckets.page[1] = {"\\newpage ", ""}
     elseif r and r.kind == "break" then
@@ -213,6 +215,21 @@ end
 function S.classify_split(words, alias)
   local buckets = {page = {}, section = {}, lines = {}, align = {}, wrap = {}}
   classify_into(words, alias, buckets)
+  -- A counter style (num/roman/ROMAN/alpha/ALPHA) redefines the numbering
+  -- of the heading level carried by the same tag, autonomously (no
+  -- inherited prefix) -- the attribute form of what the <section> block
+  -- already does.
+  if buckets.counter then
+    if not buckets.section[1] then
+      error("scholatex: a counter style (num/roman/ROMAN/alpha/ALPHA) is "
+          .. "only meaningful next to a heading keyword (section, "
+          .. "subsection, subsubsection)")
+    end
+    local open = buckets.section[1][1]              -- e.g. "\\section{"
+    local name = open:match("(%a+)%*?{$") or open:match("(%a+)")
+    buckets.section[1][1] = "\\renewcommand{\\the" .. name .. "}{"
+      .. buckets.counter .. "{" .. name .. "}}" .. open
+  end
   local outer = {}
   for _, cat in ipairs({"page", "lines", "section", "align"}) do
     for _, e in ipairs(buckets[cat]) do outer[#outer + 1] = e end

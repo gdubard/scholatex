@@ -366,8 +366,8 @@ function M.mathlite(s)
         return "\\widehat{" .. M.mathlite(arg) .. "}"
 
       elseif word == "angle" then
-        error("scholatex: angle s'utilise avec des points : "
-            .. "angle(A) ou angle(ABC)")
+        error("scholatex: angle expects point names: "
+            .. "angle(A) or angle(ABC)")
 
       -- Triangle on three points: triangle(ABC) -> the symbol then the points.
       elseif word == "triangle" and s:sub(after, after) == "(" then
@@ -669,7 +669,6 @@ function M.mathlite(s)
         if op.contour then
           head = op.pre .. "_{" .. spec .. "}"
           diffs = {}
-          local v = spec:match("^%a$") and spec or "z"
           diffs[1] = "\\,\\mathrm{d}" .. (spec:match("^%l$") and spec or "z")
         elseif op.pre ~= "" then
           local var, lo, hi = spec:match("^(%S+)%s*=%s*(.-)%s*,%s*(.-)%s*$")
