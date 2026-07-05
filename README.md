@@ -76,13 +76,13 @@ The order of words inside a tag never matters — emission is always normalised 
 `scholatex` is on CTAN and ships with TeX Live, so on a current, fully updated TeX Live or MacTeX it is already there — compile with `lualatex` and nothing more is needed. If your installation predates the package, install it once with the TeX Live manager; the same two commands work on **macOS, Linux and Windows**:
 
 ```bash
-tlmgr update --self
+tlmgr update --all
 tlmgr install scholatex
 ```
 
 On macOS (MacTeX) and most Linux setups `tlmgr` needs administrator rights, so prefix both with `sudo`. On Windows, open the *TeX Live Command-Line* (or a terminal as Administrator) and run them without `sudo`. MiKTeX users install through the MiKTeX Console (*Packages* → search `scholatex` → *Install*), or with `mpm --install=scholatex`.
 
-`tlmgr update --self` comes first because the manager refuses to install packages when its own version is older than the repository's. After installing, check the class is found:
+`tlmgr update --all` comes first because the manager refuses to install packages when its own version is older than the repository's. After installing, check the class is found:
 
 ```bash
 kpsewhich scholatex.cls
@@ -94,7 +94,7 @@ If `tlmgr install scholatex` reports the package is *not present in the reposito
 
 ```bash
 sudo tlmgr option repository https://mirror.ctan.org/systems/texlive/tlnet
-sudo tlmgr update --self
+sudo tlmgr update --all
 sudo tlmgr install scholatex
 ```
 
